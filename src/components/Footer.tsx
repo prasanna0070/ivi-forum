@@ -58,6 +58,17 @@ export default function Footer() {
                   <ArrowUpRight size={15} strokeWidth={2} />
                 </a>
               </li>
+              <li>
+                <a
+                  href="https://www.quarktex.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center gap-1 ${linkClass}`}
+                >
+                  Powered by Quarktex Co&apos;4
+                  <ArrowUpRight size={15} strokeWidth={2} />
+                </a>
+              </li>
             </ul>
           </div>
 
