@@ -6,7 +6,6 @@
  * Save → POST /api/profile → /directory.
  */
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { AlertCircle, Plus, X } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import IviArrow from '@/components/IviArrow';
@@ -107,7 +106,6 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ initialValues, editMode }: ProfileFormProps) {
-  const router = useRouter();
   const [values, setValues] = useState<ProfileFormValues>(initialValues);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -146,9 +144,11 @@ export function ProfileForm({ initialValues, editMode }: ProfileFormProps) {
       });
       const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
       if (res.ok && data?.ok) {
-        router.push('/directory');
-        router.refresh();
-        return; // keep the button in its pending state while navigating
+        // Hard navigation (not router.push+refresh) so the member area always
+        // loads cleanly with fresh server state — see AuthCard for the race this
+        // avoids. Keeps the button pending while the page reloads.
+        window.location.assign('/directory');
+        return;
       }
       setError(data?.error ?? 'Could not save your profile — please try again.');
       setSaving(false);

@@ -8,7 +8,6 @@
  * zero-radius CTA with an arrow that slides on hover.
  */
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import IviArrow from "@/components/IviArrow";
 
@@ -32,7 +31,6 @@ const submitClass =
   "group mt-1 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-brand bg-brand px-6 text-base font-semibold text-white transition-colors hover:bg-brand-light active:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60";
 
 export default function AuthCard() {
-  const router = useRouter();
   const [tab, setTab] = useState<Tab>("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -55,8 +53,13 @@ export default function AuthCard() {
         setError("Wrong email or password.");
         return;
       }
-      router.push("/directory");
-      router.refresh();
+      // Hard navigation (full document load) on purpose. A soft router.push +
+      // refresh here raced with the proxy's auth redirect and the landing's own
+      // authed redirect, leaving the client stuck on a blank, dead page until a
+      // manual reload. A real navigation loads /directory cleanly with the fresh
+      // session cookie every time.
+      window.location.assign("/directory");
+      return;
     } catch {
       setError("Something went wrong — please try again.");
     } finally {
@@ -90,8 +93,8 @@ export default function AuthCard() {
         setError("Account created — please sign in.");
         return;
       }
-      router.push("/onboarding");
-      router.refresh();
+      window.location.assign("/onboarding"); // hard nav — see handleSignIn note
+      return;
     } catch {
       setError("Something went wrong — please try again.");
     } finally {
