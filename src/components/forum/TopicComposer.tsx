@@ -1,9 +1,10 @@
 'use client';
 
 /**
- * TopicComposer — "Start a topic" button + modal composer.
- * Title, plain-text body, tag chips (comma/Enter, ≤5). On success navigates
- * to the new thread.
+ * TopicComposer — "Start a topic" button + composer.
+ * Full-screen sheet on mobile (safe-area padded, sticky action bar); centered
+ * modal on desktop. Title, plain-text body, tag chips (comma/Enter, ≤5). On
+ * success navigates to the new thread.
  */
 import { useRouter } from 'next/navigation';
 import {
@@ -13,10 +14,11 @@ import {
   type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
+import { ArrowRight, X } from 'lucide-react';
 import { MAX_TAGS, slugifyTag } from './tags';
 
 const inputClass =
-  'w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-ink placeholder:text-neutral-400 focus:border-brand-light focus:outline-none focus:ring-2 focus:ring-brand-light/25';
+  'w-full rounded-input border border-border bg-white px-3 py-2.5 text-base text-ink placeholder:text-placeholder transition-colors focus:border-heading focus:outline-2 focus:-outline-offset-2 focus:outline-heading/30';
 
 export default function TopicComposer() {
   const router = useRouter();
@@ -95,9 +97,14 @@ export default function TopicComposer() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-light focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-light"
+        className="group inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-brand bg-brand px-6 py-3 text-base font-semibold text-white transition-all hover:bg-brand-light active:bg-brand-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-heading/40 sm:w-auto"
       >
         Start a topic
+        <ArrowRight
+          strokeWidth={2}
+          className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-2"
+          aria-hidden="true"
+        />
       </button>
 
       {open && (
@@ -105,99 +112,124 @@ export default function TopicComposer() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="topic-composer-heading"
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/40 p-4 pt-[8vh]"
+          className="fixed inset-0 z-50 flex bg-ink/40 md:items-start md:justify-center md:overflow-y-auto md:p-4 md:pt-[8vh]"
           onClick={(event) => {
             if (event.target === event.currentTarget && !pending) setOpen(false);
           }}
         >
           <form
             onSubmit={submit}
-            className="w-full max-w-xl rounded-xl border border-neutral-200 bg-white p-6 shadow-lg"
+            className="flex h-full w-full flex-col bg-white md:h-auto md:max-h-[85vh] md:max-w-xl md:rounded-card md:border md:border-border md:shadow-pop"
           >
-            <h2 id="topic-composer-heading" className="font-display text-lg font-semibold text-ink">
-              Start a topic
-            </h2>
-
-            <label htmlFor="topic-title" className="mt-4 block text-xs font-medium text-neutral-500">
-              Title
-            </label>
-            <input
-              id="topic-title"
-              ref={titleRef}
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              maxLength={200}
-              required
-              placeholder="What do you want to discuss?"
-              className={`mt-1 ${inputClass}`}
-            />
-
-            <label htmlFor="topic-body" className="mt-4 block text-xs font-medium text-neutral-500">
-              Body <span className="font-normal text-neutral-400">— plain text, be kind</span>
-            </label>
-            <textarea
-              id="topic-body"
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-              maxLength={10000}
-              rows={6}
-              placeholder="Add context, links, questions…"
-              className={`mt-1 resize-y ${inputClass}`}
-            />
-
-            <label htmlFor="topic-tags" className="mt-4 block text-xs font-medium text-neutral-500">
-              Tags <span className="font-normal text-neutral-400">— up to {MAX_TAGS}, comma or Enter</span>
-            </label>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2 py-1.5 focus-within:border-brand-light focus-within:ring-2 focus-within:ring-brand-light/25">
-              {tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-brand"
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
-                    aria-label={`Remove tag ${tag}`}
-                    className="text-brand/60 transition-colors hover:text-brand"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-              <input
-                id="topic-tags"
-                value={tagInput}
-                onChange={(event) => setTagInput(event.target.value)}
-                onKeyDown={onTagKeyDown}
-                onBlur={() => addTag(tagInput)}
-                disabled={tags.length >= MAX_TAGS}
-                placeholder={tags.length >= MAX_TAGS ? 'Max 5 tags' : 'e.g. fundraising'}
-                className="min-w-24 flex-1 border-none bg-transparent px-1 py-0.5 text-sm text-ink placeholder:text-neutral-400 focus:outline-none"
-              />
+            {/* Header — stays in view while the body scrolls */}
+            <div className="flex items-center justify-between gap-4 border-b border-border px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] md:px-6 md:pt-4">
+              <h2 id="topic-composer-heading" className="font-serif text-xl font-semibold text-heading">
+                Start a topic
+              </h2>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!pending) setOpen(false);
+                }}
+                disabled={pending}
+                aria-label="Close"
+                className="-mr-1 flex h-11 w-11 items-center justify-center rounded-card text-muted transition-colors hover:bg-surface-2 hover:text-brand disabled:opacity-60 md:h-9 md:w-9"
+              >
+                <X strokeWidth={2} className="h-5 w-5" aria-hidden="true" />
+              </button>
             </div>
 
-            {error && (
-              <p role="alert" className="mt-3 text-sm text-red-600">
-                {error}
-              </p>
-            )}
+            {/* Body — the only scrollable region */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6">
+              <label htmlFor="topic-title" className="block text-sm font-semibold text-ink">
+                Title
+              </label>
+              <input
+                id="topic-title"
+                ref={titleRef}
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                maxLength={200}
+                required
+                placeholder="What do you want to discuss?"
+                className={`mt-1.5 ${inputClass}`}
+              />
 
-            <div className="mt-6 flex justify-end gap-3">
+              <label htmlFor="topic-body" className="mt-4 block text-sm font-semibold text-ink">
+                Body <span className="font-normal text-muted">— plain text, be kind</span>
+              </label>
+              <textarea
+                id="topic-body"
+                value={body}
+                onChange={(event) => setBody(event.target.value)}
+                maxLength={10000}
+                rows={6}
+                placeholder="Add context, links, questions…"
+                className={`mt-1.5 resize-y ${inputClass}`}
+              />
+
+              <label htmlFor="topic-tags" className="mt-4 block text-sm font-semibold text-ink">
+                Tags <span className="font-normal text-muted">— up to {MAX_TAGS}, comma or Enter</span>
+              </label>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-input border border-border bg-white px-2 py-1.5 transition-colors focus-within:border-heading focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-heading/30">
+                {tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 rounded-input border border-border bg-surface px-2 py-0.5 text-xs font-medium text-brand"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
+                      aria-label={`Remove tag ${tag}`}
+                      className="text-brand/60 transition-colors hover:text-brand"
+                    >
+                      <X strokeWidth={2} className="h-3 w-3" aria-hidden="true" />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  id="topic-tags"
+                  value={tagInput}
+                  onChange={(event) => setTagInput(event.target.value)}
+                  onKeyDown={onTagKeyDown}
+                  onBlur={() => addTag(tagInput)}
+                  disabled={tags.length >= MAX_TAGS}
+                  placeholder={tags.length >= MAX_TAGS ? 'Max 5 tags' : 'e.g. fundraising'}
+                  className="min-w-24 flex-1 border-none bg-transparent px-1 py-0.5 text-base text-ink placeholder:text-placeholder focus:outline-none"
+                />
+              </div>
+
+              {error && (
+                <p role="alert" className="mt-3 text-sm text-danger">
+                  {error}
+                </p>
+              )}
+            </div>
+
+            {/* Action bar — pinned bottom on mobile, primary on top when stacked */}
+            <div className="flex flex-col-reverse gap-3 border-t border-border px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] md:flex-row md:justify-end md:px-6 md:py-4">
               <button
                 type="button"
                 onClick={() => setOpen(false)}
                 disabled={pending}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-neutral-500 transition-colors hover:bg-surface hover:text-ink disabled:opacity-60"
+                className="inline-flex min-h-[44px] w-full items-center justify-center rounded-brand border border-brand px-6 py-3 text-base font-semibold text-brand transition-colors hover:border-brand-light hover:text-brand-light disabled:opacity-60 md:w-auto"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={pending || title.trim().length === 0}
-                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-light disabled:cursor-not-allowed disabled:opacity-60"
+                className="group inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-brand bg-brand px-6 py-3 text-base font-semibold text-white transition-all hover:bg-brand-light active:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 md:w-auto"
               >
                 {pending ? 'Posting…' : 'Post topic'}
+                {!pending && (
+                  <ArrowRight
+                    strokeWidth={2}
+                    className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-2"
+                    aria-hidden="true"
+                  />
+                )}
               </button>
             </div>
           </form>

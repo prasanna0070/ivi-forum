@@ -1,9 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { ArrowLeft, ArrowUpRight, MapPin, Pencil } from 'lucide-react';
 import Avatar from '@/components/Avatar';
-import Badge from '@/components/Badge';
-import Card from '@/components/Card';
 import LinkedInIcon from '@/components/directory/LinkedInIcon';
 import { getMember } from '@/lib/firestore';
 import { requireMember } from '@/lib/session';
@@ -16,12 +15,21 @@ function toHref(website: string): string {
   return /^https?:\/\//i.test(website) ? website : `https://${website}`;
 }
 
+/** Squared ISB cohort chip (outline badge recipe: 2px radius, #cfdbe2 hairline). */
+function CohortChip({ cohort }: { cohort: number }) {
+  return (
+    <span className="inline-flex items-center rounded-input border border-border bg-white px-2 py-0.5 text-xs font-semibold text-brand">
+      Cohort {cohort}
+    </span>
+  );
+}
+
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <Card className="p-6">
-      <h2 className="font-display text-lg font-semibold text-ink">{title}</h2>
-      <div className="mt-3">{children}</div>
-    </Card>
+    <section className="rounded-card border border-border bg-white p-6 sm:p-7">
+      <h2 className="font-serif text-xl font-semibold text-heading sm:text-2xl">{title}</h2>
+      <div className="mt-4">{children}</div>
+    </section>
   );
 }
 
@@ -29,21 +37,26 @@ function MemberNotFound() {
   return (
     <main className="min-h-screen bg-surface">
       <div className="mx-auto max-w-xl px-4 py-16 sm:px-6">
-        <Card className="p-10 text-center">
-          <h1 className="font-display text-xl font-semibold text-ink">
+        <div className="rounded-card border border-border bg-white p-10 text-center">
+          <h1 className="font-serif text-2xl font-semibold text-heading">
             This member hasn’t joined yet
           </h1>
-          <p className="mt-2 text-sm text-ink/60">
+          <p className="mt-3 text-sm leading-relaxed text-muted">
             We couldn’t find a profile at this address — it may have moved, or they haven’t
             signed up.
           </p>
           <Link
             href="/directory"
-            className="mt-6 inline-block rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-light"
+            className="group mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-brand bg-brand px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-brand-light"
           >
+            <ArrowLeft
+              strokeWidth={2}
+              aria-hidden="true"
+              className="h-4 w-4 transition-transform group-hover:-translate-x-1"
+            />
             Back to directory
           </Link>
-        </Card>
+        </div>
       </div>
     </main>
   );
@@ -77,68 +90,88 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
 
   return (
     <main className="min-h-screen bg-surface">
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
         <Link
           href="/directory"
-          className="mb-4 inline-block text-sm text-ink/50 transition-colors hover:text-brand"
+          className="group mb-6 inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition-colors hover:text-brand-light"
         >
-          ← Back to directory
+          <ArrowLeft
+            strokeWidth={2}
+            aria-hidden="true"
+            className="h-4 w-4 transition-transform group-hover:-translate-x-1"
+          />
+          Back to directory
         </Link>
 
-        <div className="space-y-4">
+        <div className="space-y-5 sm:space-y-6">
           {/* Header card */}
-          <Card className="p-6 sm:p-8">
+          <div className="rounded-card border border-border bg-white p-6 sm:p-8">
             <div className="flex flex-col items-start gap-5 sm:flex-row">
               <Avatar src={member.photoUrl} name={member.name} size={96} className="shrink-0" />
 
               <div className="min-w-0 flex-1">
-                <h1 className="font-display text-2xl font-semibold text-ink">{member.name}</h1>
-                {member.headline && <p className="mt-1 text-ink/70">{member.headline}</p>}
+                <h1 className="font-serif text-3xl font-semibold text-heading sm:text-4xl">
+                  {member.name}
+                </h1>
+                {member.headline && (
+                  <p className="mt-1.5 text-base leading-relaxed text-ink">{member.headline}</p>
+                )}
 
-                <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink/50">
-                  {member.location && <span>{member.location}</span>}
+                <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm text-muted">
+                  {member.location && (
+                    <span className="inline-flex items-center gap-1">
+                      <MapPin strokeWidth={2} aria-hidden="true" className="h-4 w-4" />
+                      {member.location}
+                    </span>
+                  )}
                   {member.location && member.cohort && <span aria-hidden="true">·</span>}
-                  {member.cohort && <Badge variant="brand">Cohort {member.cohort}</Badge>}
+                  {member.cohort && <CohortChip cohort={member.cohort} />}
                 </div>
 
                 {(member.currentTitle || member.currentCompany) && (
-                  <p className="mt-2 text-sm text-ink/60">
+                  <p className="mt-2 text-sm text-muted">
                     {[member.currentTitle, member.currentCompany].filter(Boolean).join(' · ')}
                   </p>
                 )}
 
                 {counts.length > 0 && (
-                  <p className="mt-2 text-xs text-ink/40">{counts.join(' · ')}</p>
+                  <p className="mt-2 text-xs text-muted">{counts.join(' · ')}</p>
                 )}
 
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                   {member.linkedinUrl && (
                     <a
                       href={member.linkedinUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-lg border border-brand px-4 py-2 text-sm font-medium text-brand transition-colors hover:bg-brand hover:text-white"
+                      className="group inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-brand border border-brand px-6 py-3 text-base font-semibold text-brand transition-colors hover:border-brand-light hover:text-brand-light sm:w-auto"
                     >
                       <LinkedInIcon className="h-4 w-4" />
                       LinkedIn
+                      <ArrowUpRight
+                        strokeWidth={2}
+                        aria-hidden="true"
+                        className="h-4 w-4 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1"
+                      />
                     </a>
                   )}
                   {isOwn && (
                     <Link
                       href="/onboarding?edit=1"
-                      className="inline-flex items-center rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-light"
+                      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-brand border border-brand px-6 py-3 text-base font-semibold text-brand transition-colors hover:border-brand-light hover:text-brand-light sm:w-auto"
                     >
+                      <Pencil strokeWidth={2} aria-hidden="true" className="h-4 w-4" />
                       Edit profile
                     </Link>
                   )}
                 </div>
               </div>
             </div>
-          </Card>
+          </div>
 
           {hasAbout && (
             <SectionCard title="About">
-              <p className="whitespace-pre-line text-sm leading-relaxed text-ink/80">
+              <p className="whitespace-pre-line text-base leading-relaxed text-ink">
                 {member.about}
               </p>
             </SectionCard>
@@ -147,10 +180,10 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
           {hasStartup && (
             <SectionCard title="Startup">
               {member.startupName && (
-                <p className="font-medium text-ink">{member.startupName}</p>
+                <p className="font-semibold text-ink">{member.startupName}</p>
               )}
               {member.startupDescription && (
-                <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-ink/70">
+                <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-ink">
                   {member.startupDescription}
                 </p>
               )}
@@ -159,9 +192,16 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
                   href={toHref(member.startupWebsite)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-2 inline-block text-sm font-medium text-brand-light hover:underline"
+                  className="group mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-light transition-colors hover:text-brand"
                 >
-                  {member.startupWebsite.replace(/^https?:\/\//i, '').replace(/\/$/, '')}
+                  <span className="underline underline-offset-4">
+                    {member.startupWebsite.replace(/^https?:\/\//i, '').replace(/\/$/, '')}
+                  </span>
+                  <ArrowUpRight
+                    strokeWidth={2}
+                    aria-hidden="true"
+                    className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                  />
                 </a>
               )}
             </SectionCard>
@@ -169,22 +209,22 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
 
           {hasExperience && (
             <SectionCard title="Experience">
-              <ol className="relative ml-1.5 space-y-6 border-l border-ink/10 pl-6">
+              <ol className="relative space-y-6 border-l border-border pl-6">
                 {member.experience.map((item, i) => (
                   <li key={`${item.title}-${item.company}-${i}`} className="relative">
                     <span
                       aria-hidden="true"
-                      className="absolute -left-[30.5px] top-1.5 h-2.5 w-2.5 rounded-full bg-brand-light"
+                      className="absolute -left-[29px] top-1.5 h-2.5 w-2.5 rounded-full bg-brand ring-4 ring-white"
                     />
-                    <p className="font-medium text-ink">{item.title}</p>
-                    {item.company && <p className="text-sm text-ink/70">{item.company}</p>}
+                    <p className="font-semibold text-ink">{item.title}</p>
+                    {item.company && <p className="text-sm text-muted">{item.company}</p>}
                     {(item.duration || item.location) && (
-                      <p className="mt-0.5 text-xs text-ink/40">
+                      <p className="mt-0.5 text-xs text-muted">
                         {[item.duration, item.location].filter(Boolean).join(' · ')}
                       </p>
                     )}
                     {item.description && (
-                      <p className="mt-1.5 line-clamp-4 text-sm leading-relaxed text-ink/60">
+                      <p className="mt-2 line-clamp-4 text-sm leading-relaxed text-ink">
                         {item.description}
                       </p>
                     )}
@@ -196,16 +236,16 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
 
           {hasEducation && (
             <SectionCard title="Education">
-              <ul className="space-y-4">
+              <ul className="divide-y divide-border">
                 {member.education.map((item, i) => (
-                  <li key={`${item.school}-${i}`}>
-                    <p className="font-medium text-ink">{item.school}</p>
+                  <li key={`${item.school}-${i}`} className="py-4 first:pt-0 last:pb-0">
+                    <p className="font-semibold text-ink">{item.school}</p>
                     {(item.degree || item.fieldOfStudy) && (
-                      <p className="text-sm text-ink/70">
+                      <p className="text-sm text-muted">
                         {[item.degree, item.fieldOfStudy].filter(Boolean).join(' · ')}
                       </p>
                     )}
-                    {item.period && <p className="mt-0.5 text-xs text-ink/40">{item.period}</p>}
+                    {item.period && <p className="mt-0.5 text-xs text-muted">{item.period}</p>}
                   </li>
                 ))}
               </ul>
@@ -218,7 +258,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
                 {member.skills.map((skill) => (
                   <span
                     key={skill}
-                    className="rounded-full border border-ink/10 bg-surface px-3 py-1 text-sm text-ink/70"
+                    className="rounded-input border border-border bg-white px-3 py-1 text-sm text-brand"
                   >
                     {skill}
                   </span>
@@ -228,11 +268,11 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
           )}
 
           {isThin && (
-            <Card className="p-8 text-center">
-              <p className="text-sm text-ink/50">
+            <div className="rounded-card border border-border bg-white p-8 text-center">
+              <p className="text-sm text-muted">
                 More coming as {firstName} fills out their profile.
               </p>
-            </Card>
+            </div>
           )}
         </div>
       </div>

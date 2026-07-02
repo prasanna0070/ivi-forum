@@ -3,22 +3,31 @@
  * reply composer. Server component; params/searchParams are Promises (Next 16).
  */
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import Avatar from '@/components/Avatar';
-import Badge from '@/components/Badge';
-import Card from '@/components/Card';
 import ReplyComposer from '@/components/forum/ReplyComposer';
 import VoteWidget from '@/components/forum/VoteWidget';
 import { getTopic, getVotesForUser, listReplies, type ReplySort } from '@/lib/firestore';
 import { timeAgo } from '@/lib/format';
 import { requireMember } from '@/lib/session';
 
+const REPLY_TABS: { key: ReplySort; label: string }[] = [
+  { key: 'new', label: 'New' },
+  { key: 'top', label: 'Top' },
+];
+
 function BackLink() {
   return (
     <Link
       href="/forum"
-      className="inline-flex items-center gap-1 text-sm font-medium text-brand transition-colors hover:text-brand-light"
+      className="group inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition-colors hover:text-brand-light"
     >
-      <span aria-hidden="true">←</span> Forum
+      <ArrowLeft
+        strokeWidth={2}
+        className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1"
+        aria-hidden="true"
+      />
+      Forum
     </Link>
   );
 }
@@ -40,21 +49,26 @@ export default async function TopicPage({
   const topic = await getTopic(topicId);
   if (!topic) {
     return (
-      <main className="mx-auto w-full max-w-3xl px-4 py-8">
+      <div className="mx-auto w-full max-w-3xl">
         <BackLink />
-        <Card className="mt-6 p-10 text-center">
-          <p className="font-display text-lg font-semibold text-ink">Topic not found</p>
-          <p className="mt-1 text-sm text-neutral-500">
+        <div className="mt-6 rounded-card border border-border bg-white p-10 text-center">
+          <p className="font-serif text-xl font-semibold text-heading">Topic not found</p>
+          <p className="mt-1 text-sm text-muted">
             It may have been removed, or the link is wrong.
           </p>
           <Link
             href="/forum"
-            className="mt-4 inline-block rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-light"
+            className="group mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-brand bg-brand px-6 py-3 text-base font-semibold text-white transition-all hover:bg-brand-light active:bg-brand-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-heading/40"
           >
+            <ArrowLeft
+              strokeWidth={2}
+              className="h-5 w-5 transition-transform duration-200 group-hover:-translate-x-1"
+              aria-hidden="true"
+            />
             Back to the forum
           </Link>
-        </Card>
-      </main>
+        </div>
+      </div>
     );
   }
 
@@ -62,12 +76,12 @@ export default async function TopicPage({
   const myVotes = await getVotesForUser(user.id, [topicId, ...replies.map((r) => r.id)]);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
+    <div className="mx-auto w-full max-w-3xl">
       <BackLink />
 
       {/* Topic card */}
-      <Card className="mt-4 p-6">
-        <div className="flex gap-4">
+      <div className="mt-4 rounded-card border border-border bg-white p-5 md:p-6">
+        <div className="flex gap-3 sm:gap-4">
           <VoteWidget
             targetType="topic"
             targetId={topic.id}
@@ -76,73 +90,82 @@ export default async function TopicPage({
             myVote={myVotes[topic.id] ?? null}
           />
           <div className="min-w-0 flex-1">
-            <h1 className="font-display text-2xl font-bold text-ink">{topic.title}</h1>
+            <h1 className="font-serif text-[1.75rem] font-semibold leading-tight text-heading md:text-[2rem]">
+              {topic.title}
+            </h1>
             {topic.tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
+              <div className="mt-3 flex flex-wrap gap-1.5">
                 {topic.tags.map((tag) => (
-                  <Badge key={tag} variant="neutral">
+                  <span
+                    key={tag}
+                    className="inline-flex items-center rounded-input border border-border bg-white px-2 py-0.5 text-xs font-medium text-brand"
+                  >
                     {tag}
-                  </Badge>
+                  </span>
                 ))}
               </div>
             )}
-            <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-neutral-500">
-              <Avatar src={topic.authorPhotoUrl} name={topic.authorName} size={20} />
+            <div className="mt-3 flex min-w-0 items-center gap-x-1.5 text-xs text-muted">
+              <Avatar
+                src={topic.authorPhotoUrl}
+                name={topic.authorName}
+                size={20}
+                className="shrink-0"
+              />
               <Link
                 href={`/profile/${topic.authorUid}`}
-                className="font-medium text-ink/70 transition-colors hover:text-brand"
+                className="min-w-0 truncate font-medium text-ink transition-colors hover:text-brand-light"
               >
                 {topic.authorName}
               </Link>
-              <span aria-hidden="true">·</span>
-              <span>{timeAgo(topic.createdAt)}</span>
+              <span aria-hidden="true" className="shrink-0">
+                ·
+              </span>
+              <span className="shrink-0 whitespace-nowrap">{timeAgo(topic.createdAt)}</span>
             </div>
             {topic.body && (
-              <p className="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-ink/90">
+              <p className="mt-4 whitespace-pre-line text-base leading-[1.6] text-ink">
                 {topic.body}
               </p>
             )}
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Replies */}
       <div className="mt-8 flex items-center justify-between gap-4">
-        <h2 className="font-display text-lg font-semibold text-ink">
+        <h2 className="font-serif text-xl font-semibold text-heading md:text-2xl">
           {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
         </h2>
-        <nav aria-label="Sort replies" className="flex items-center gap-3 text-sm">
-          <Link
-            href={`/forum/${topicId}`}
-            aria-current={sort === 'new' ? 'page' : undefined}
-            className={
-              sort === 'new'
-                ? 'font-semibold text-brand underline underline-offset-4'
-                : 'text-neutral-500 transition-colors hover:text-ink'
-            }
-          >
-            New
-          </Link>
-          <Link
-            href={`/forum/${topicId}?sort=top`}
-            aria-current={sort === 'top' ? 'page' : undefined}
-            className={
-              sort === 'top'
-                ? 'font-semibold text-brand underline underline-offset-4'
-                : 'text-neutral-500 transition-colors hover:text-ink'
-            }
-          >
-            Top
-          </Link>
+        <nav aria-label="Sort replies" className="flex items-center gap-4">
+          {REPLY_TABS.map((tab) => {
+            const href =
+              tab.key === 'new' ? `/forum/${topicId}` : `/forum/${topicId}?sort=${tab.key}`;
+            const active = sort === tab.key;
+            return (
+              <Link
+                key={tab.key}
+                href={href}
+                aria-current={active ? 'page' : undefined}
+                className={`inline-flex min-h-[44px] items-center border-b-[3px] px-0.5 text-sm font-semibold transition-colors ${
+                  active
+                    ? 'border-brand text-brand'
+                    : 'border-transparent text-muted hover:text-brand-light'
+                }`}
+              >
+                {tab.label}
+              </Link>
+            );
+          })}
         </nav>
       </div>
 
       <div className="mt-4 flex flex-col gap-3">
         {replies.length === 0 ? (
-          <p className="text-sm text-neutral-500">No replies yet — be the first to weigh in.</p>
+          <p className="text-sm text-muted">No replies yet — be the first to weigh in.</p>
         ) : (
           replies.map((reply) => (
-            <Card key={reply.id} className="p-4">
+            <div key={reply.id} className="rounded-card border border-border bg-white p-4">
               <div className="flex gap-3">
                 <VoteWidget
                   compact
@@ -153,23 +176,30 @@ export default async function TopicPage({
                   myVote={myVotes[reply.id] ?? null}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="whitespace-pre-line text-sm leading-relaxed text-ink/90">
+                  <p className="whitespace-pre-line text-base leading-[1.6] text-ink">
                     {reply.body}
                   </p>
-                  <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-neutral-500">
-                    <Avatar src={reply.authorPhotoUrl} name={reply.authorName} size={20} />
+                  <div className="mt-3 flex min-w-0 items-center gap-x-1.5 text-xs text-muted">
+                    <Avatar
+                      src={reply.authorPhotoUrl}
+                      name={reply.authorName}
+                      size={20}
+                      className="shrink-0"
+                    />
                     <Link
                       href={`/profile/${reply.authorUid}`}
-                      className="font-medium text-ink/70 transition-colors hover:text-brand"
+                      className="min-w-0 truncate font-medium text-ink transition-colors hover:text-brand-light"
                     >
                       {reply.authorName}
                     </Link>
-                    <span aria-hidden="true">·</span>
-                    <span>{timeAgo(reply.createdAt)}</span>
+                    <span aria-hidden="true" className="shrink-0">
+                      ·
+                    </span>
+                    <span className="shrink-0 whitespace-nowrap">{timeAgo(reply.createdAt)}</span>
                   </div>
                 </div>
               </div>
-            </Card>
+            </div>
           ))
         )}
       </div>
@@ -178,6 +208,6 @@ export default async function TopicPage({
       <div className="mt-8">
         <ReplyComposer topicId={topicId} />
       </div>
-    </main>
+    </div>
   );
 }

@@ -55,10 +55,13 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
       <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
         {editMode && (
           <header className="mb-6">
-            <h1 className="font-display text-2xl font-semibold text-ink sm:text-3xl">
+            <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted">
+              Your profile
+            </p>
+            <h1 className="mt-2 font-serif text-3xl font-semibold leading-[1.1] text-heading sm:text-4xl">
               Edit your profile
             </h1>
-            <p className="mt-2 text-neutral-600">
+            <p className="mt-4 max-w-prose text-ink">
               Update anything below — changes go live in the directory as soon as you save.
             </p>
           </header>

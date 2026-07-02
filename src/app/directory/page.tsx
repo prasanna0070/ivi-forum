@@ -15,10 +15,12 @@ export default async function DirectoryPage() {
 
   return (
     <main className="min-h-screen bg-surface">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
         <header className="mb-6">
-          <h1 className="font-display text-2xl font-semibold text-ink">Member directory</h1>
-          <p className="mt-1 text-sm text-ink/60">
+          <h1 className="font-serif text-3xl font-semibold text-heading sm:text-4xl">
+            Member directory
+          </h1>
+          <p className="mt-2 text-sm text-muted sm:text-base">
             Welcome back, {firstName} — founders and builders across all four iVi cohorts.
           </p>
         </header>

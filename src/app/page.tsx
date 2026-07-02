@@ -1,41 +1,41 @@
 /**
  * Landing page — signed-in users bounce straight into the app
  * (/directory, or /onboarding until the profile is complete).
+ *
+ * Full-bleed banded layout (navy hero → surface features → white join).
+ * The `-mx-4 sm:-mx-6 -my-8` wrapper cancels the shared <main> padding so the
+ * bands span the container edge-to-edge without ever exceeding its width — no
+ * horizontal overflow at any viewport.
  */
 import Image from "next/image";
 import { redirect } from "next/navigation";
+import { Users, MessageSquare, Zap, ArrowRight } from "lucide-react";
 import { auth } from "@/auth";
 import { getMember } from "@/lib/firestore";
 import AuthCard from "@/components/AuthCard";
 import Card from "@/components/Card";
 
-const FEATURES: { title: string; description: string; icon: React.ReactNode }[] = [
+const FEATURES: {
+  title: string;
+  description: string;
+  Icon: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+}[] = [
   {
     title: "Directory",
-    description: "Find founders across all four cohorts — searchable by name, startup, and skills.",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM21 20v-1a4 4 0 0 0-3-3.87M15 3.13A4 4 0 0 1 15 11" />
-      </svg>
-    ),
+    description:
+      "Find founders across all four cohorts — searchable by name, startup, and skills.",
+    Icon: Users,
   },
   {
     title: "Forum",
-    description: "Ask, share, and vote — one discussion room for the whole iVi community.",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12c0 4.14-4.03 7.5-9 7.5-1.06 0-2.07-.15-3-.43L3 21l1.55-3.87C3.58 15.83 3 14 3 12c0-4.14 4.03-7.5 9-7.5s9 3.36 9 7.5Z" />
-      </svg>
-    ),
+    description:
+      "Ask, share, and vote — one discussion room for the whole iVi community.",
+    Icon: MessageSquare,
   },
   {
     title: "LinkedIn-powered profiles",
     description: "Paste your LinkedIn URL and your member profile builds itself.",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7Z" />
-      </svg>
-    ),
+    Icon: Zap,
   },
 ];
 
@@ -47,37 +47,92 @@ export default async function Home() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-10 py-8 sm:py-14">
-      <Image
-        src="/brand/ivi-logo.png"
-        alt="I-Venture @ ISB"
-        width={299}
-        height={60}
-        priority
-        className="h-12 w-auto sm:h-14"
-      />
+    <div className="-mx-4 -my-8 flex flex-col sm:-mx-6">
+      {/* ── hero (navy band) ── */}
+      <section className="bg-gradient-to-b from-brand to-brand-dark text-white">
+        <div className="px-safe mx-auto flex max-w-3xl flex-col items-center px-4 py-16 text-center sm:px-6 md:py-24">
+          <Image
+            src="/brand/ivi-logo-white.png"
+            alt="I-Venture @ ISB"
+            width={1920}
+            height={389}
+            priority
+            className="h-10 w-auto sm:h-12"
+          />
+          <p className="mt-8 text-[13px] font-semibold uppercase tracking-[0.08em] text-white/70">
+            The I-Venture @ ISB community
+          </p>
+          <h1 className="mt-3 font-serif text-[40px] font-semibold leading-[1.1] text-white md:text-display">
+            Every cohort. One room.
+          </h1>
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-white/85 md:text-lg">
+            The member directory and forum for I-Venture @ ISB founders — built by
+            the community, for the community.
+          </p>
+          <a
+            href="#join"
+            className="group mt-8 inline-flex min-h-[44px] items-center justify-center gap-2 border border-white bg-white px-6 text-base font-semibold text-brand transition-colors hover:border-mint hover:bg-mint"
+          >
+            Join the community
+            <ArrowRight
+              size={20}
+              strokeWidth={2}
+              className="transition-transform duration-200 group-hover:translate-x-2"
+            />
+          </a>
+        </div>
+      </section>
 
-      <div className="max-w-2xl text-center">
-        <h1 className="font-display text-4xl font-semibold tracking-tight text-brand sm:text-5xl">
-          Every cohort. One room.
-        </h1>
-        <p className="mt-4 text-lg text-ink/70">
-          The member directory and forum for I-Venture @ ISB founders — built by
-          the community, for the community.
-        </p>
-      </div>
+      {/* ── features (surface band) ── */}
+      <section className="bg-surface">
+        <div className="px-safe mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20">
+          <div className="max-w-2xl">
+            <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted">
+              What&rsquo;s inside
+            </p>
+            <h2 className="mt-2 text-[24px] font-semibold leading-tight md:text-h2">
+              Everything the community runs on
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-ink">
+              One place to find every founder and keep the conversation going —
+              across all four cohorts.
+            </p>
+          </div>
 
-      <div className="grid w-full max-w-3xl gap-4 sm:grid-cols-3">
-        {FEATURES.map((f) => (
-          <Card key={f.title} className="p-5">
-            <div className="text-brand">{f.icon}</div>
-            <h2 className="mt-3 text-sm font-semibold text-ink">{f.title}</h2>
-            <p className="mt-1 text-sm text-ink/60">{f.description}</p>
-          </Card>
-        ))}
-      </div>
+          <div className="mt-10 grid gap-4 sm:grid-cols-3">
+            {FEATURES.map(({ title, description, Icon }) => (
+              <Card key={title} className="p-6">
+                <Icon size={24} strokeWidth={2} className="text-brand" />
+                <h3 className="mt-4 font-serif text-xl font-semibold text-heading">
+                  {title}
+                </h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-ink">
+                  {description}
+                </p>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
 
-      <AuthCard />
+      {/* ── join (white band) ── */}
+      <section id="join" className="scroll-mt-24 bg-white">
+        <div className="px-safe mx-auto flex max-w-6xl flex-col items-center px-4 py-16 sm:px-6 md:py-20">
+          <div className="mb-8 max-w-xl text-center">
+            <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-brand-light">
+              Join
+            </p>
+            <h2 className="mt-2 text-[24px] font-semibold leading-tight md:text-h2">
+              Get in the room
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-ink">
+              Sign in with your account, or create one in seconds — your profile
+              builds itself from LinkedIn.
+            </p>
+          </div>
+          <AuthCard />
+        </div>
+      </section>
     </div>
   );
 }

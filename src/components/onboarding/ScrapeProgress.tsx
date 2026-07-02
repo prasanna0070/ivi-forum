@@ -6,7 +6,7 @@
  * reflect real progress, they just keep the wait warm.
  */
 import { useEffect, useState } from 'react';
-import Card from '@/components/Card';
+import { Loader2 } from 'lucide-react';
 import Skeleton from '@/components/Skeleton';
 
 const STATUS_LINES = [
@@ -32,24 +32,21 @@ export function ScrapeProgress() {
   }, []);
 
   return (
-    <Card className="p-6 sm:p-8">
-      <div className="flex items-center gap-3">
-        <span
-          aria-hidden
-          className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-brand/20 border-t-brand"
-        />
-        <p
-          key={lineIndex}
-          role="status"
-          aria-live="polite"
-          className="animate-pulse font-medium text-brand"
-        >
+    <div className="rounded-card border border-border bg-white p-6 sm:p-8">
+      <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted">
+        Setting up your profile
+      </p>
+      <h1 className="mt-2 font-serif text-2xl font-semibold text-heading sm:text-3xl">
+        Building your profile
+      </h1>
+
+      <div className="mt-4 flex items-center gap-3">
+        <Loader2 aria-hidden strokeWidth={2} className="h-5 w-5 shrink-0 animate-spin text-brand" />
+        <p key={lineIndex} role="status" aria-live="polite" className="animate-pulse font-medium text-brand">
           {STATUS_LINES[lineIndex]}
         </p>
       </div>
-      <p className="mt-2 text-sm text-neutral-500">
-        This usually takes under a minute — hang tight.
-      </p>
+      <p className="mt-2 text-sm text-muted">This usually takes under a minute — hang tight.</p>
 
       {/* Ghost of the profile being assembled */}
       <div className="mt-8 space-y-6" aria-hidden>
@@ -66,12 +63,12 @@ export function ScrapeProgress() {
           <Skeleton className="h-3 w-4/6" />
         </div>
         <div className="flex flex-wrap gap-2">
-          <Skeleton className="h-6 w-20 rounded-full" />
-          <Skeleton className="h-6 w-24 rounded-full" />
-          <Skeleton className="h-6 w-16 rounded-full" />
-          <Skeleton className="h-6 w-28 rounded-full" />
+          <Skeleton className="h-6 w-20 rounded-none" />
+          <Skeleton className="h-6 w-24 rounded-none" />
+          <Skeleton className="h-6 w-16 rounded-none" />
+          <Skeleton className="h-6 w-28 rounded-none" />
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

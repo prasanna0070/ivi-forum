@@ -1,13 +1,16 @@
 "use client";
 
 /**
- * Sign in / Sign up tab card for the landing page.
+ * Sign in / Sign up card for the landing page.
  * Sign up → POST /api/auth/signup → credentials signIn → /onboarding.
  * Sign in → credentials signIn → /directory.
+ * Squared underline-bar tabs, recipe inputs (16px on mobile → no iOS zoom),
+ * zero-radius CTA with an arrow that slides on hover.
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { ArrowRight } from "lucide-react";
 
 type Tab = "signin" | "signup";
 
@@ -21,7 +24,12 @@ function Spinner() {
 }
 
 const inputClass =
-  "w-full rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/40 focus:border-brand-light focus:outline-none focus:ring-2 focus:ring-brand-light/30";
+  "w-full rounded-input border border-border bg-white px-3 py-2.5 text-base text-ink placeholder:text-placeholder focus:border-heading focus:[outline:2px_solid_rgba(30,45,140,0.3)] focus:[outline-offset:-2px]";
+
+const labelClass = "text-sm font-semibold text-ink";
+
+const submitClass =
+  "group mt-1 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-brand bg-brand px-6 text-base font-semibold text-white transition-colors hover:bg-brand-light active:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60";
 
 export default function AuthCard() {
   const router = useRouter();
@@ -92,8 +100,8 @@ export default function AuthCard() {
   }
 
   return (
-    <div className="w-full max-w-md rounded-xl border border-ink/10 bg-white p-6">
-      <div className="mb-5 grid grid-cols-2 rounded-lg bg-surface p-1 text-sm font-medium">
+    <div className="w-full max-w-md rounded-card border border-border bg-white p-6 shadow-card sm:p-8">
+      <div className="mb-6 flex border-b border-border">
         {(
           [
             ["signin", "Sign in"],
@@ -105,18 +113,21 @@ export default function AuthCard() {
             type="button"
             onClick={() => switchTab(key)}
             aria-pressed={tab === key}
-            className={`rounded-md px-3 py-2 transition ${
-              tab === key ? "bg-white text-brand shadow-sm" : "text-ink/60 hover:text-ink"
+            className={`relative -mb-px flex-1 px-3 py-3 text-sm font-semibold transition-colors ${
+              tab === key ? "text-brand" : "text-muted hover:text-brand"
             }`}
           >
             {label}
+            {tab === key && (
+              <span className="absolute inset-x-0 bottom-0 h-[3px] bg-brand" />
+            )}
           </button>
         ))}
       </div>
 
       {tab === "signup" ? (
-        <form onSubmit={handleSignUp} className="flex flex-col gap-3">
-          <label className="text-sm font-medium text-ink">
+        <form onSubmit={handleSignUp} className="flex flex-col gap-4">
+          <label className={labelClass}>
             Name
             <input
               type="text"
@@ -126,10 +137,10 @@ export default function AuthCard() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Your full name"
-              className={`mt-1 ${inputClass}`}
+              className={`mt-1.5 ${inputClass}`}
             />
           </label>
-          <label className="text-sm font-medium text-ink">
+          <label className={labelClass}>
             Email
             <input
               type="email"
@@ -138,10 +149,10 @@ export default function AuthCard() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className={`mt-1 ${inputClass}`}
+              className={`mt-1.5 ${inputClass}`}
             />
           </label>
-          <label className="text-sm font-medium text-ink">
+          <label className={labelClass}>
             Password
             <input
               type="password"
@@ -151,22 +162,25 @@ export default function AuthCard() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="At least 8 characters"
-              className={`mt-1 ${inputClass}`}
+              className={`mt-1.5 ${inputClass}`}
             />
           </label>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button
-            type="submit"
-            disabled={pending}
-            className="mt-1 flex items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-light disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          {error && <p className="text-sm text-danger">{error}</p>}
+          <button type="submit" disabled={pending} className={submitClass}>
             {pending && <Spinner />}
             {pending ? "Creating your account…" : "Create account"}
+            {!pending && (
+              <ArrowRight
+                size={20}
+                strokeWidth={2}
+                className="transition-transform duration-200 group-hover:translate-x-2"
+              />
+            )}
           </button>
         </form>
       ) : (
-        <form onSubmit={handleSignIn} className="flex flex-col gap-3">
-          <label className="text-sm font-medium text-ink">
+        <form onSubmit={handleSignIn} className="flex flex-col gap-4">
+          <label className={labelClass}>
             Email
             <input
               type="email"
@@ -175,10 +189,10 @@ export default function AuthCard() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className={`mt-1 ${inputClass}`}
+              className={`mt-1.5 ${inputClass}`}
             />
           </label>
-          <label className="text-sm font-medium text-ink">
+          <label className={labelClass}>
             Password
             <input
               type="password"
@@ -187,17 +201,20 @@ export default function AuthCard() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Your password"
-              className={`mt-1 ${inputClass}`}
+              className={`mt-1.5 ${inputClass}`}
             />
           </label>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button
-            type="submit"
-            disabled={pending}
-            className="mt-1 flex items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-light disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          {error && <p className="text-sm text-danger">{error}</p>}
+          <button type="submit" disabled={pending} className={submitClass}>
             {pending && <Spinner />}
             {pending ? "Signing in…" : "Sign in"}
+            {!pending && (
+              <ArrowRight
+                size={20}
+                strokeWidth={2}
+                className="transition-transform duration-200 group-hover:translate-x-2"
+              />
+            )}
           </button>
         </form>
       )}

@@ -7,8 +7,8 @@
  */
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AlertCircle, ArrowRight, Plus, X } from 'lucide-react';
 import Avatar from '@/components/Avatar';
-import Card from '@/components/Card';
 import { ChipInput } from '@/components/onboarding/ChipInput';
 import {
   EMPTY_EDUCATION_ROW,
@@ -23,10 +23,12 @@ import {
 // Small styled primitives (local to onboarding)
 // ---------------------------------------------------------------------------
 
+// Input recipe: 2px radius, hairline #cfdbe2 border, 16px font (iOS no-zoom),
+// ISB focus ring (2px rgba(30,45,140,.3) outline inset + heading-blue border).
 const inputClass =
-  'w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-ink ' +
-  'placeholder:text-neutral-400 focus:border-brand-light focus:outline-none ' +
-  'focus:ring-2 focus:ring-brand-light/20';
+  'w-full min-h-[44px] rounded-input border border-border bg-white px-3 py-2.5 text-base text-ink ' +
+  'transition-colors placeholder:text-placeholder focus:border-heading ' +
+  'focus:[outline:2px_solid_rgba(30,45,140,0.3)] focus:[outline-offset:-2px]';
 
 function Field({
   label,
@@ -41,9 +43,9 @@ function Field({
 }) {
   return (
     <label className={`block ${className ?? ''}`}>
-      <span className="mb-1.5 block text-sm font-medium text-ink">
+      <span className="mb-1.5 block text-sm font-semibold text-ink">
         {label}
-        {required && <span className="ml-0.5 text-accent">*</span>}
+        {required && <span className="ml-0.5 text-brand-light">*</span>}
       </span>
       {children}
     </label>
@@ -60,11 +62,11 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="p-6 sm:p-8">
-      <h2 className="font-display text-lg font-semibold text-brand">{title}</h2>
-      {hint && <p className="mt-1 text-sm text-neutral-500">{hint}</p>}
+    <section className="rounded-card border border-border bg-white p-6 sm:p-8">
+      <h2 className="font-serif text-xl font-semibold text-heading sm:text-2xl">{title}</h2>
+      {hint && <p className="mt-1 text-sm text-muted">{hint}</p>}
       <div className="mt-5 space-y-4">{children}</div>
-    </Card>
+    </section>
   );
 }
 
@@ -73,8 +75,9 @@ function RemoveRowButton({ onClick, label }: { onClick: () => void; label: strin
     <button
       type="button"
       onClick={onClick}
-      className="text-xs font-medium text-neutral-400 transition-colors hover:text-red-600"
+      className="-mr-2 inline-flex min-h-[44px] items-center gap-1.5 px-2 text-sm font-medium text-muted transition-colors hover:text-danger"
     >
+      <X aria-hidden strokeWidth={2} className="h-4 w-4" />
       {label}
     </button>
   );
@@ -85,9 +88,10 @@ function AddRowButton({ onClick, label }: { onClick: () => void; label: string }
     <button
       type="button"
       onClick={onClick}
-      className="rounded-lg border border-dashed border-neutral-300 px-4 py-2 text-sm font-medium text-brand transition-colors hover:border-brand-light hover:bg-brand/5"
+      className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-none border border-brand bg-transparent px-5 py-2.5 text-sm font-semibold text-brand transition-colors hover:border-brand-light hover:text-brand-light sm:w-auto"
     >
-      + {label}
+      <Plus aria-hidden strokeWidth={2} className="h-5 w-5" />
+      {label}
     </button>
   );
 }
@@ -171,7 +175,7 @@ export function ProfileForm({ initialValues, editMode }: ProfileFormProps) {
             </Field>
           </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <Field label="Name" required>
             <input
               type="text"
@@ -223,7 +227,7 @@ export function ProfileForm({ initialValues, editMode }: ProfileFormProps) {
 
       {/* ------------------------------------------------ iVi & startup */}
       <SectionCard title="iVi & your startup" hint="Your cohort and what you're building.">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <Field label="iVi cohort">
             <select
               value={values.cohort}
@@ -269,7 +273,7 @@ export function ProfileForm({ initialValues, editMode }: ProfileFormProps) {
 
       {/* ------------------------------------------------ Current role */}
       <SectionCard title="Current role">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <Field label="Title">
             <input
               type="text"
@@ -299,14 +303,14 @@ export function ProfileForm({ initialValues, editMode }: ProfileFormProps) {
       {/* ------------------------------------------------ Experience */}
       <SectionCard title="Experience">
         {values.experience.length === 0 && (
-          <p className="rounded-lg border border-dashed border-neutral-200 px-4 py-6 text-center text-sm text-neutral-400">
+          <p className="rounded-card border border-dashed border-border bg-surface px-4 py-6 text-center text-sm text-muted">
             No experience added yet — add a role if you like.
           </p>
         )}
         {values.experience.map((row, i) => (
-          <div key={i} className="space-y-3 rounded-lg border border-neutral-200 p-4">
+          <div key={i} className="space-y-3 rounded-card border border-border bg-surface p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">
                 Role {i + 1}
               </span>
               <RemoveRowButton
@@ -319,7 +323,7 @@ export function ProfileForm({ initialValues, editMode }: ProfileFormProps) {
                 }
               />
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-2">
               <input
                 type="text"
                 value={row.title}
@@ -374,14 +378,14 @@ export function ProfileForm({ initialValues, editMode }: ProfileFormProps) {
       {/* ------------------------------------------------ Education */}
       <SectionCard title="Education">
         {values.education.length === 0 && (
-          <p className="rounded-lg border border-dashed border-neutral-200 px-4 py-6 text-center text-sm text-neutral-400">
+          <p className="rounded-card border border-dashed border-border bg-surface px-4 py-6 text-center text-sm text-muted">
             No education added yet — add a school if you like.
           </p>
         )}
         {values.education.map((row, i) => (
-          <div key={i} className="space-y-3 rounded-lg border border-neutral-200 p-4">
+          <div key={i} className="space-y-3 rounded-card border border-border bg-surface p-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+              <span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted">
                 School {i + 1}
               </span>
               <RemoveRowButton
@@ -394,7 +398,7 @@ export function ProfileForm({ initialValues, editMode }: ProfileFormProps) {
                 }
               />
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-2">
               <input
                 type="text"
                 value={row.school}
@@ -440,18 +444,31 @@ export function ProfileForm({ initialValues, editMode }: ProfileFormProps) {
 
       {/* ------------------------------------------------ Save */}
       {error && (
-        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
+        <p
+          role="alert"
+          className="flex items-start gap-3 rounded-card border border-danger/40 bg-danger/5 px-4 py-3 text-sm text-danger"
+        >
+          <AlertCircle aria-hidden strokeWidth={2} className="mt-0.5 h-5 w-5 shrink-0" />
+          <span>{error}</span>
         </p>
       )}
-      <div className="flex items-center justify-end gap-4 pb-4">
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-lg bg-brand px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-light disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {saving ? 'Saving…' : editMode ? 'Save changes' : 'Save profile'}
-        </button>
+
+      {/* Sticky action bar on mobile (long form); inline right-aligned on desktop. */}
+      <div className="sticky bottom-0 z-10 -mx-4 border-t border-border bg-white px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)_+_0.75rem)] sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:pt-0 sm:pb-4">
+        <div className="flex sm:justify-end">
+          <button
+            type="submit"
+            disabled={saving}
+            className="group inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-none border border-brand bg-brand px-6 py-3 text-base font-semibold text-white transition-colors hover:border-brand-light hover:bg-brand-light active:bg-brand-dark disabled:cursor-not-allowed disabled:border-[#c6c6c6] disabled:bg-transparent disabled:text-[#c6c6c6] sm:w-auto"
+          >
+            {saving ? 'Saving…' : editMode ? 'Save changes' : 'Save profile'}
+            <ArrowRight
+              aria-hidden
+              strokeWidth={2}
+              className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-[8px]"
+            />
+          </button>
+        </div>
       </div>
     </form>
   );

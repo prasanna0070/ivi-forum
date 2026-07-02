@@ -1,29 +1,73 @@
 @import "tailwindcss";
 
 /*
- * iVi Forum brand tokens — extracted from i-venture.org + isb.edu
- * (see branding-assets/BRAND.md). Use ONLY these tokens for brand colors:
- * bg-brand, text-brand, bg-brand-light, bg-accent, bg-surface, text-ink, …
+ * iVi Forum design system — extracted verbatim from isb.edu + i-venture.org CSS
+ * (see branding-assets/DESIGN.md — the binding contract). Use ONLY these tokens
+ * for brand colour/radius/shadow/type. Every legacy token name below still works.
  */
 @theme {
-  --color-brand: #192890;
-  --color-brand-light: #245bff;
-  --color-accent: #ffb172;
-  --color-surface: #f4f8fa;
-  --color-ink: #1d252a;
+  /* ── colour (legacy names kept) ───────────────────────── */
+  --color-brand: #192890; /* primary indigo — UI text, buttons, icons, nav */
+  --color-brand-light: #245bff; /* hover state of everything indigo; badges */
+  --color-accent: #ffb172; /* peach — hairline underlines, chips; tiny doses */
+  --color-surface: #f4f8fa; /* page bg / alternating band / card-on-white */
+  --color-ink: #1d252a; /* body copy */
+
+  /* ── colour (new) ─────────────────────────────────────── */
+  --color-brand-dark: #131f70; /* darkest navy — hero bands, active button */
+  --color-heading: #1e2d8c; /* ALL serif headings on light backgrounds */
+  --color-border: #cfdbe2; /* hairline card/input borders, dividers */
+  --color-surface-2: #eef3f7; /* hover fills, lighter band */
+  --color-footer: #2e3b42; /* footer slate (i-venture.org exact) */
+  --color-footer-strip: #5d6f7a; /* footer bottom strip */
+  --color-mint: #80edd9; /* ISB aquamarine — overlay panels, highlight */
+  --color-mint-light: #bdf4e9; /* mint hover tint */
+  --color-muted: #525252; /* kickers/eyebrows, secondary meta */
+  --color-placeholder: #95a9b4; /* input placeholders */
+  --color-danger: #e12433; /* ISB red — destructive/error only */
+
+  /* ── radius ───────────────────────────────────────────── */
+  --radius-brand: 0px; /* buttons, chips, marketing cards */
+  --radius-card: 6px; /* max radius for app-UI cards */
+  --radius-input: 2px; /* form fields */
+
+  /* ── shadow ───────────────────────────────────────────── */
+  --shadow-card: 0 1px 4px rgba(20, 25, 55, 0.06);
+  --shadow-nav: 0 10px 20px rgba(43, 61, 80, 0.06);
+  --shadow-pop: 0 6px 18px rgba(20, 25, 55, 0.15); /* dropdowns/popovers only */
+
+  /* ── type scale (desktop; mobile handled per-utility) ─── */
+  --text-display: 4rem; /* 64px hero */
+  --text-display--line-height: 1.1;
+  --text-h1: 3rem; /* 48px */
+  --text-h1--line-height: 1.1;
+  --text-h2: 2.5rem; /* 40px */
+  --text-h2--line-height: 1.2;
+  --text-h3: 2rem; /* 32px */
+  --text-h3--line-height: 1.5;
 }
 
 /*
- * Fonts are provided by next/font in src/app/layout.tsx as CSS variables
- * (--font-inter → Inter, --font-inter-tight → Inter Tight). `inline` so the
- * font-sans / font-display utilities resolve the next/font variables set on
- * <html> directly.
+ * Fonts are provided by next/font in src/app/layout.tsx as CSS variables:
+ *   --font-inter        → Inter        (body / UI)
+ *   --font-inter-tight  → Inter Tight  (compact UI labels)
+ *   --font-fraunces     → Fraunces     (serif display headings — Reckless stand-in)
+ * `inline` so font-sans / font-display / font-serif resolve the next/font
+ * variables set on <html> directly.
  */
 @theme inline {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-display: var(--font-inter-tight), var(--font-inter), ui-sans-serif,
     system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), Lora, "Playfair Display", Georgia,
+    "Times New Roman", serif;
+}
+
+/* Guard against horizontal overflow at every viewport (clip doesn't create a
+   scroll container, so the sticky header keeps working). */
+html {
+  overflow-x: clip;
 }
 
 /* Light theme only — no dark mode. */
@@ -37,9 +81,31 @@ body {
 @layer base {
   h1,
   h2,
-  h3,
-  h4 {
-    font-family: var(--font-inter-tight), var(--font-inter), ui-sans-serif,
-      system-ui, sans-serif;
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    color: var(--color-heading);
+  }
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    color: var(--color-brand);
+  }
+}
+
+@layer utilities {
+  /* Safe-area padding for the sticky header + full-screen mobile menu on
+     notched devices (paired with viewportFit: "cover" in layout.tsx). */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .px-safe {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
   }
 }

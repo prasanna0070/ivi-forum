@@ -7,7 +7,7 @@
  *   3. 'form'     — editable profile form (prefilled from scrape / existing member)
  */
 import { useState } from 'react';
-import Card from '@/components/Card';
+import { ArrowRight, Info } from 'lucide-react';
 import { ProfileForm } from '@/components/onboarding/ProfileForm';
 import { ScrapeProgress } from '@/components/onboarding/ScrapeProgress';
 import { toFormValues, type ProfileFormValues } from '@/components/onboarding/formValues';
@@ -87,12 +87,13 @@ export function OnboardingFlow({ userName, editMode, initialProfile }: Onboardin
     return (
       <div className="space-y-6">
         {scrapeError && (
-          <p
+          <div
             role="status"
-            className="rounded-xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm text-ink"
+            className="flex items-start gap-3 rounded-card border border-border bg-surface-2 px-4 py-3 text-sm text-ink"
           >
-            {scrapeError}
-          </p>
+            <Info aria-hidden strokeWidth={2} className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
+            <p>{scrapeError}</p>
+          </div>
         )}
         <ProfileForm initialValues={formValues} editMode={editMode} />
       </div>
@@ -101,48 +102,56 @@ export function OnboardingFlow({ userName, editMode, initialProfile }: Onboardin
 
   // ------------------------------------------------ Step 1: LinkedIn URL
   return (
-    <Card className="p-6 sm:p-10">
-      <h1 className="font-display text-2xl font-semibold text-ink sm:text-3xl">
-        Welcome, {userName} <span aria-hidden>👋</span>
+    <div className="rounded-card border border-border bg-white p-6 sm:p-10">
+      <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted">
+        Set up your profile
+      </p>
+      <h1 className="mt-2 font-serif text-3xl font-semibold leading-[1.1] text-heading sm:text-4xl">
+        Welcome, {userName}
       </h1>
-      <p className="mt-3 max-w-prose text-neutral-600">
+      <p className="mt-4 max-w-prose text-ink">
         Drop your LinkedIn URL and we&apos;ll build your profile for you.
       </p>
 
       <form onSubmit={handleScrape} className="mt-8 space-y-4">
         <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-ink">LinkedIn profile URL</span>
+          <span className="mb-1.5 block text-sm font-semibold text-ink">LinkedIn profile URL</span>
           <input
             type="text"
             value={linkedinUrl}
             onChange={(e) => setLinkedinUrl(e.target.value)}
             placeholder="https://www.linkedin.com/in/your-name"
             autoFocus
-            className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-ink placeholder:text-neutral-400 focus:border-brand-light focus:outline-none focus:ring-2 focus:ring-brand-light/20"
+            className="min-h-[44px] w-full rounded-input border border-border bg-white px-3 py-2.5 text-base text-ink transition-colors placeholder:text-placeholder focus:border-heading focus:[outline:2px_solid_rgba(30,45,140,0.3)] focus:[outline-offset:-2px]"
           />
         </label>
         {urlError && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-danger">
             {urlError}
           </p>
         )}
         <button
           type="submit"
-          className="w-full rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-light sm:w-auto"
+          className="group inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-none border border-brand bg-brand px-6 py-3 text-base font-semibold text-white transition-colors hover:border-brand-light hover:bg-brand-light active:bg-brand-dark sm:w-auto"
         >
           Build my profile
+          <ArrowRight
+            aria-hidden
+            strokeWidth={2}
+            className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-[8px]"
+          />
         </button>
       </form>
 
-      <p className="mt-6 text-sm text-neutral-500">
+      <p className="mt-6 text-sm">
         <button
           type="button"
           onClick={skipToEmptyForm}
-          className="underline decoration-neutral-300 underline-offset-4 transition-colors hover:text-brand"
+          className="text-muted underline decoration-border underline-offset-[3px] transition-colors hover:text-brand-light"
         >
-          skip — I&apos;ll fill it manually
+          Skip — I&apos;ll fill it in manually
         </button>
       </p>
-    </Card>
+    </div>
   );
 }

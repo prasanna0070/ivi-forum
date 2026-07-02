@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * VoteWidget — the ▲ score ▼ column used for both topics and replies.
+ * VoteWidget — the up / score / down column used for both topics and replies.
  *
  * Optimistic: clicking computes the expected toggle result locally (same
  * semantics as `castVote` in @/lib/firestore), POSTs /api/votes, then
@@ -9,6 +9,7 @@
  * shows a transient error.
  */
 import { useEffect, useRef, useState } from 'react';
+import { ArrowBigDown, ArrowBigUp } from 'lucide-react';
 import type { VoteTargetType, VoteValue } from '@/lib/types';
 
 interface VoteWidgetProps {
@@ -30,18 +31,6 @@ function toggle(state: VoteState, value: VoteValue): VoteState {
   if (state.myVote === value) return { score: state.score - value, myVote: null };
   if (state.myVote === null) return { score: state.score + value, myVote: value };
   return { score: state.score + 2 * value, myVote: value };
-}
-
-function Arrow({ direction, className }: { direction: 'up' | 'down'; className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
-      {direction === 'up' ? (
-        <path d="M12 5.5 20 17H4l8-11.5Z" />
-      ) : (
-        <path d="M12 18.5 4 7h16l-8 11.5Z" />
-      )}
-    </svg>
-  );
 }
 
 export default function VoteWidget({
@@ -106,10 +95,18 @@ export default function VoteWidget({
     }
   }
 
-  const arrowSize = compact ? 'h-4 w-4' : 'h-5 w-5';
-  const buttonPad = compact ? 'p-0.5' : 'p-1';
-  const scoreColor =
-    state.myVote === 1 ? 'text-brand-light' : state.myVote === -1 ? 'text-accent' : 'text-ink';
+  const upActive = state.myVote === 1;
+  const downActive = state.myVote === -1;
+  const iconSize = compact ? 18 : 20;
+  const scoreColor = upActive ? 'text-brand-light' : downActive ? 'text-muted' : 'text-ink';
+
+  // ISB line-icon language: 2px stroke, round caps, currentColor. Tap targets
+  // stay ≥44px on mobile via spacing, tightening on desktop for density.
+  const tapClass =
+    'flex items-center justify-center rounded-card transition-colors ' +
+    'min-h-[44px] min-w-[44px] md:min-h-[32px] md:min-w-[32px] ' +
+    'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-heading/40 ' +
+    'disabled:opacity-60';
 
   return (
     <div className="relative flex shrink-0 flex-col items-center self-start">
@@ -118,16 +115,18 @@ export default function VoteWidget({
         onClick={() => vote(1)}
         disabled={pending}
         aria-label="Upvote"
-        aria-pressed={state.myVote === 1}
-        className={`rounded-md ${buttonPad} transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-light disabled:opacity-60 ${
-          state.myVote === 1 ? 'text-brand-light' : 'text-neutral-400 hover:text-ink'
+        aria-pressed={upActive}
+        className={`${tapClass} ${
+          upActive ? 'text-brand-light' : 'text-placeholder hover:bg-surface-2 hover:text-brand'
         }`}
       >
-        <Arrow direction="up" className={arrowSize} />
+        <ArrowBigUp strokeWidth={2} width={iconSize} height={iconSize} aria-hidden="true" />
       </button>
       <span
         aria-live="polite"
-        className={`select-none font-semibold tabular-nums ${compact ? 'text-xs' : 'text-sm'} ${scoreColor}`}
+        className={`select-none font-semibold leading-none tabular-nums ${
+          compact ? 'text-xs' : 'text-sm'
+        } ${scoreColor}`}
       >
         {state.score}
       </span>
@@ -136,17 +135,17 @@ export default function VoteWidget({
         onClick={() => vote(-1)}
         disabled={pending}
         aria-label="Downvote"
-        aria-pressed={state.myVote === -1}
-        className={`rounded-md ${buttonPad} transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-light disabled:opacity-60 ${
-          state.myVote === -1 ? 'text-accent' : 'text-neutral-400 hover:text-ink'
+        aria-pressed={downActive}
+        className={`${tapClass} ${
+          downActive ? 'text-muted' : 'text-placeholder hover:bg-surface-2 hover:text-brand'
         }`}
       >
-        <Arrow direction="down" className={arrowSize} />
+        <ArrowBigDown strokeWidth={2} width={iconSize} height={iconSize} aria-hidden="true" />
       </button>
       {error && (
         <span
           role="status"
-          className="absolute left-full top-1/2 z-10 ml-2 -translate-y-1/2 whitespace-nowrap rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-600"
+          className="absolute left-full top-1/2 z-10 ml-2 -translate-y-1/2 whitespace-nowrap rounded-input bg-danger/10 px-1.5 py-0.5 text-[10px] font-medium text-danger"
         >
           {error}
         </span>

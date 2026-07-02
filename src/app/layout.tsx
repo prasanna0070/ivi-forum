@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
-import { Inter, Inter_Tight } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Inter, Inter_Tight, Fraunces } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -14,10 +14,27 @@ const interTight = Inter_Tight({
   variable: "--font-inter-tight",
 });
 
+// Serif display face — Google-Fonts stand-in for ISB's proprietary "Reckless".
+// Loaded fully variable (all weights 100–900) with the optical-size axis so it
+// stays sturdy at card sizes and refined at hero sizes. (next/font rejects the
+// weight + axes combination, so weight is left unset = the full variable range.)
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  axes: ["opsz"],
+  variable: "--font-fraunces",
+});
+
 export const metadata: Metadata = {
   title: "iVi Forum — the I-Venture @ ISB community",
   description:
     "The member directory and discussion forum for I-Venture @ ISB founders — every cohort, one room. Built by the community, for the community.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover", // enables env(safe-area-inset-*) on notched devices
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
@@ -28,7 +45,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${interTight.variable} h-full antialiased`}
+      className={`${inter.variable} ${interTight.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <Header />

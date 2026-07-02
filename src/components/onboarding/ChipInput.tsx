@@ -5,6 +5,7 @@
  * Backspace on an empty input removes the last chip.
  */
 import { useState } from 'react';
+import { X } from 'lucide-react';
 
 interface ChipInputProps {
   value: string[];
@@ -50,35 +51,33 @@ export function ChipInput({
   }
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white px-2 py-2 focus-within:border-brand-light focus-within:ring-2 focus-within:ring-brand-light/20">
-      <div className="flex flex-wrap items-center gap-1.5">
-        {value.map((chip, i) => (
-          <span
-            key={`${chip}-${i}`}
-            className="inline-flex items-center gap-1 rounded-full bg-brand/5 px-2.5 py-1 text-xs font-medium text-brand"
+    <div className="flex min-h-[44px] flex-wrap items-center gap-1.5 rounded-input border border-border bg-white px-2 py-2 transition-colors focus-within:border-heading focus-within:[outline:2px_solid_rgba(30,45,140,0.3)] focus-within:[outline-offset:-2px]">
+      {value.map((chip, i) => (
+        <span
+          key={`${chip}-${i}`}
+          className="inline-flex items-center gap-1 rounded-none border border-border bg-surface px-2.5 py-1 text-xs font-medium text-brand"
+        >
+          {chip}
+          <button
+            type="button"
+            onClick={() => removeChip(i)}
+            aria-label={`Remove ${chip}`}
+            className="-mr-0.5 inline-flex items-center justify-center leading-none text-brand/50 transition-colors hover:text-brand-light"
           >
-            {chip}
-            <button
-              type="button"
-              onClick={() => removeChip(i)}
-              aria-label={`Remove ${chip}`}
-              className="rounded-full px-0.5 leading-none text-brand/50 transition-colors hover:text-brand"
-            >
-              ×
-            </button>
-          </span>
-        ))}
-        <input
-          type="text"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={() => addChip(draft)}
-          placeholder={value.length === 0 ? placeholder : ''}
-          maxLength={maxLength}
-          className="min-w-32 flex-1 border-0 bg-transparent px-1 py-0.5 text-sm text-ink placeholder:text-neutral-400 focus:outline-none"
-        />
-      </div>
+            <X aria-hidden strokeWidth={2} className="h-3.5 w-3.5" />
+          </button>
+        </span>
+      ))}
+      <input
+        type="text"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={() => addChip(draft)}
+        placeholder={value.length === 0 ? placeholder : ''}
+        maxLength={maxLength}
+        className="min-w-32 flex-1 border-0 bg-transparent px-1 py-0.5 text-base text-ink placeholder:text-placeholder focus:outline-none"
+      />
     </div>
   );
 }

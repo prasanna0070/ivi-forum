@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { Search } from 'lucide-react';
 import MemberCard from '@/components/directory/MemberCard';
 import type { Cohort, MemberProfile } from '@/lib/types';
 
@@ -43,30 +44,29 @@ export default function DirectoryGrid({ members }: { members: MemberProfile[] })
   return (
     <div>
       {/* Top bar: search + cohort chips */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm">
-          <svg
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
+          <Search
+            strokeWidth={2}
             aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40"
-          >
-            <circle cx="9" cy="9" r="6" />
-            <path d="m13.5 13.5 3.5 3.5" strokeLinecap="round" />
-          </svg>
+            className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-placeholder"
+          />
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search name, startup, skills…"
             aria-label="Search members"
-            className="w-full rounded-lg border border-ink/15 bg-white py-2 pl-9 pr-3 text-sm text-ink placeholder:text-ink/40 focus:border-brand-light focus:outline-none focus:ring-2 focus:ring-brand-light/25"
+            className="w-full rounded-input border border-border bg-white py-2.5 pl-10 pr-3 text-base text-ink transition-colors placeholder:text-placeholder focus:border-heading focus:[outline:2px_solid_rgba(30,45,140,0.3)] focus:[outline-offset:-2px]"
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by cohort">
+        {/* Squared cohort chips — 44px tap height on mobile, edge-to-edge snap-scroll if they overflow */}
+        <div
+          role="group"
+          aria-label="Filter by cohort"
+          className="-mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden"
+        >
           {COHORT_CHIPS.map((chip) => {
             const active = cohort === chip.value;
             return (
@@ -75,10 +75,10 @@ export default function DirectoryGrid({ members }: { members: MemberProfile[] })
                 type="button"
                 onClick={() => setCohort(chip.value)}
                 aria-pressed={active}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                className={`inline-flex min-h-11 shrink-0 snap-start items-center rounded-input border px-4 text-sm font-semibold transition-colors md:min-h-9 ${
                   active
                     ? 'border-brand bg-brand text-white'
-                    : 'border-ink/15 bg-white text-ink/60 hover:border-brand-light/50 hover:text-brand'
+                    : 'border-border bg-white text-brand hover:border-brand-light hover:text-brand-light'
                 }`}
               >
                 {chip.label}
@@ -88,18 +88,18 @@ export default function DirectoryGrid({ members }: { members: MemberProfile[] })
         </div>
       </div>
 
-      <p className="mt-4 text-sm text-ink/50">
+      <p className="mt-5 text-sm text-muted">
         {members.length} member{members.length === 1 ? '' : 's'} · {shown.length} shown
       </p>
 
       {shown.length === 0 ? (
-        <div className="mt-6 rounded-xl border border-ink/10 bg-white px-6 py-16 text-center">
-          <p className="font-display text-base font-medium text-ink/70">
+        <div className="mt-6 rounded-card border border-border bg-white px-6 py-16 text-center">
+          <p className="font-serif text-lg font-semibold text-heading">
             No members match — try another search.
           </p>
         </div>
       ) : (
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {shown.map((member) => (
             <MemberCard key={member.uid} member={member} />
           ))}

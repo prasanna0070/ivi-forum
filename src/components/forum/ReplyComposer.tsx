@@ -6,6 +6,7 @@
  */
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
+import { ArrowRight } from 'lucide-react';
 
 export default function ReplyComposer({ topicId }: { topicId: string }) {
   const router = useRouter();
@@ -42,11 +43,11 @@ export default function ReplyComposer({ topicId }: { topicId: string }) {
   return (
     <form
       onSubmit={submit}
-      className="rounded-xl border border-neutral-200 bg-white p-4"
+      className="rounded-card border border-border bg-white p-4"
       aria-label="Reply to this topic"
     >
-      <label htmlFor="reply-body" className="block text-xs font-medium text-neutral-500">
-        Your reply <span className="font-normal text-neutral-400">— plain text, be kind</span>
+      <label htmlFor="reply-body" className="block text-sm font-semibold text-ink">
+        Your reply <span className="font-normal text-muted">— plain text, be kind</span>
       </label>
       <textarea
         id="reply-body"
@@ -55,20 +56,27 @@ export default function ReplyComposer({ topicId }: { topicId: string }) {
         maxLength={5000}
         rows={4}
         placeholder="Share your thoughts…"
-        className="mt-1 w-full resize-y rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-ink placeholder:text-neutral-400 focus:border-brand-light focus:outline-none focus:ring-2 focus:ring-brand-light/25"
+        className="mt-1.5 w-full resize-y rounded-input border border-border bg-white px-3 py-2.5 text-base text-ink placeholder:text-placeholder transition-colors focus:border-heading focus:outline-2 focus:-outline-offset-2 focus:outline-heading/30"
       />
       {error && (
-        <p role="alert" className="mt-2 text-sm text-red-600">
+        <p role="alert" className="mt-2 text-sm text-danger">
           {error}
         </p>
       )}
-      <div className="mt-3 flex justify-end">
+      <div className="mt-3 flex">
         <button
           type="submit"
           disabled={pending || body.trim().length === 0}
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-light disabled:cursor-not-allowed disabled:opacity-60"
+          className="group inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-brand bg-brand px-6 py-3 text-base font-semibold text-white transition-all hover:bg-brand-light active:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 sm:ml-auto sm:w-auto"
         >
           {pending ? 'Posting…' : 'Reply'}
+          {!pending && (
+            <ArrowRight
+              strokeWidth={2}
+              className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-2"
+              aria-hidden="true"
+            />
+          )}
         </button>
       </div>
     </form>

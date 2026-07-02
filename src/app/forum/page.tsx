@@ -4,9 +4,8 @@
  */
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { MessageSquare } from 'lucide-react';
 import Avatar from '@/components/Avatar';
-import Badge from '@/components/Badge';
-import Card from '@/components/Card';
 import TopicComposer from '@/components/forum/TopicComposer';
 import VoteWidget from '@/components/forum/VoteWidget';
 import { getVotesForUser, listTopics, type TopicSort } from '@/lib/firestore';
@@ -20,23 +19,6 @@ const TABS: { key: TopicSort; label: string }[] = [
   { key: 'top', label: 'Top' },
   { key: 'active', label: 'Active' },
 ];
-
-function ChatIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className={className}
-    >
-      <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5Z" />
-    </svg>
-  );
-}
 
 export default async function ForumPage({
   searchParams,
@@ -56,46 +38,54 @@ export default async function ForumPage({
   );
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="font-display text-3xl font-bold text-brand">Forum</h1>
+    <div className="mx-auto w-full max-w-3xl">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="font-serif text-[2rem] font-semibold leading-tight text-heading md:text-[2.5rem]">
+          Forum
+        </h1>
         <TopicComposer />
       </div>
 
-      <nav aria-label="Sort topics" className="mt-6 flex gap-6 border-b border-neutral-200">
-        {TABS.map((tab) => (
-          <Link
-            key={tab.key}
-            href={tab.key === 'new' ? '/forum' : `/forum?sort=${tab.key}`}
-            aria-current={sort === tab.key ? 'page' : undefined}
-            className={`-mb-px border-b-2 pb-2 text-sm font-medium transition-colors ${
-              sort === tab.key
-                ? 'border-brand text-brand'
-                : 'border-transparent text-neutral-500 hover:text-ink'
-            }`}
-          >
-            {tab.label}
-          </Link>
-        ))}
+      <nav aria-label="Sort topics" className="mt-6 flex gap-6 border-b border-border md:gap-8">
+        {TABS.map((tab) => {
+          const active = sort === tab.key;
+          return (
+            <Link
+              key={tab.key}
+              href={tab.key === 'new' ? '/forum' : `/forum?sort=${tab.key}`}
+              aria-current={active ? 'page' : undefined}
+              className={`-mb-px inline-flex min-h-[44px] items-center border-b-[3px] px-1 text-sm font-semibold transition-colors ${
+                active
+                  ? 'border-brand text-brand'
+                  : 'border-transparent text-muted hover:text-brand-light'
+              }`}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="mt-6 flex flex-col gap-3">
         {topics.length === 0 ? (
-          <Card className="p-10 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/20">
-              <ChatIcon className="h-8 w-8 text-accent" />
-            </div>
-            <p className="mt-4 font-display text-lg font-semibold text-ink">
+          <div className="rounded-card border border-border bg-white p-10 text-center">
+            <span className="mx-auto flex h-11 w-11 items-center justify-center border-2 border-brand text-brand">
+              <MessageSquare strokeWidth={2} className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <p className="mt-4 font-serif text-xl font-semibold text-heading">
               No topics yet — start the first discussion.
             </p>
-            <p className="mt-1 text-sm text-neutral-500">
+            <p className="mt-1 text-sm text-muted">
               Ask a question, share a win, or float an idea for the cohort.
             </p>
-          </Card>
+          </div>
         ) : (
           topics.map((topic) => (
-            <Card key={topic.id} className="p-4">
-              <div className="flex gap-4">
+            <div
+              key={topic.id}
+              className="group rounded-card border border-border bg-white p-4 transition-colors hover:border-brand-light"
+            >
+              <div className="flex gap-3 sm:gap-4">
                 <VoteWidget
                   targetType="topic"
                   targetId={topic.id}
@@ -107,34 +97,46 @@ export default async function ForumPage({
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <Link
                       href={`/forum/${topic.id}`}
-                      className="font-semibold text-ink transition-colors hover:text-brand"
+                      className="font-semibold text-ink transition-colors group-hover:text-brand-light"
                     >
                       {topic.title}
                     </Link>
                     {topic.tags.map((tag) => (
-                      <Badge key={tag} variant="neutral">
+                      <span
+                        key={tag}
+                        className="inline-flex items-center rounded-input border border-border bg-white px-2 py-0.5 text-xs font-medium text-brand"
+                      >
                         {tag}
-                      </Badge>
+                      </span>
                     ))}
                   </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-neutral-500">
-                    <Avatar src={topic.authorPhotoUrl} name={topic.authorName} size={20} />
-                    <span className="font-medium text-ink/70">{topic.authorName}</span>
-                    <span aria-hidden="true">·</span>
-                    <span>{timeAgo(topic.createdAt)}</span>
-                    <span aria-hidden="true">·</span>
-                    <span className="inline-flex items-center gap-1">
-                      <ChatIcon className="h-3.5 w-3.5" />
+                  <div className="mt-2 flex min-w-0 items-center gap-x-1.5 text-xs text-muted">
+                    <Avatar
+                      src={topic.authorPhotoUrl}
+                      name={topic.authorName}
+                      size={20}
+                      className="shrink-0"
+                    />
+                    <span className="min-w-0 truncate font-medium text-ink">{topic.authorName}</span>
+                    <span aria-hidden="true" className="shrink-0">
+                      ·
+                    </span>
+                    <span className="shrink-0 whitespace-nowrap">{timeAgo(topic.createdAt)}</span>
+                    <span aria-hidden="true" className="shrink-0">
+                      ·
+                    </span>
+                    <span className="inline-flex shrink-0 items-center gap-1">
+                      <MessageSquare strokeWidth={2} className="h-3.5 w-3.5" aria-hidden="true" />
                       {topic.replyCount}
                       <span className="sr-only">replies</span>
                     </span>
                   </div>
                 </div>
               </div>
-            </Card>
+            </div>
           ))
         )}
       </div>
-    </main>
+    </div>
   );
 }
