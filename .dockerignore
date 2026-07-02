@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+branding-assets
+SPEC.md
+deploy.sh
+*.md
+.env
+.env.*
+!.env.example

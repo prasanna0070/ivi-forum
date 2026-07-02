@@ -1,65 +1,83 @@
+/**
+ * Landing page — signed-in users bounce straight into the app
+ * (/directory, or /onboarding until the profile is complete).
+ */
 import Image from "next/image";
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { getMember } from "@/lib/firestore";
+import AuthCard from "@/components/AuthCard";
+import Card from "@/components/Card";
 
-export default function Home() {
+const FEATURES: { title: string; description: string; icon: React.ReactNode }[] = [
+  {
+    title: "Directory",
+    description: "Find founders across all four cohorts — searchable by name, startup, and skills.",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM21 20v-1a4 4 0 0 0-3-3.87M15 3.13A4 4 0 0 1 15 11" />
+      </svg>
+    ),
+  },
+  {
+    title: "Forum",
+    description: "Ask, share, and vote — one discussion room for the whole iVi community.",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12c0 4.14-4.03 7.5-9 7.5-1.06 0-2.07-.15-3-.43L3 21l1.55-3.87C3.58 15.83 3 14 3 12c0-4.14 4.03-7.5 9-7.5s9 3.36 9 7.5Z" />
+      </svg>
+    ),
+  },
+  {
+    title: "LinkedIn-powered profiles",
+    description: "Paste your LinkedIn URL and your member profile builds itself.",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7Z" />
+      </svg>
+    ),
+  },
+];
+
+export default async function Home() {
+  const session = await auth();
+  if (session?.user?.id) {
+    const member = await getMember(session.user.id).catch(() => null);
+    redirect(member?.profileComplete ? "/directory" : "/onboarding");
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="flex flex-col items-center gap-10 py-8 sm:py-14">
+      <Image
+        src="/brand/ivi-logo.png"
+        alt="I-Venture @ ISB"
+        width={299}
+        height={60}
+        priority
+        className="h-12 w-auto sm:h-14"
+      />
+
+      <div className="max-w-2xl text-center">
+        <h1 className="font-display text-4xl font-semibold tracking-tight text-brand sm:text-5xl">
+          Every cohort. One room.
+        </h1>
+        <p className="mt-4 text-lg text-ink/70">
+          The member directory and forum for I-Venture @ ISB founders — built by
+          the community, for the community.
+        </p>
+      </div>
+
+      <div className="grid w-full max-w-3xl gap-4 sm:grid-cols-3">
+        {FEATURES.map((f) => (
+          <Card key={f.title} className="p-5">
+            <div className="text-brand">{f.icon}</div>
+            <h2 className="mt-3 text-sm font-semibold text-ink">{f.title}</h2>
+            <p className="mt-1 text-sm text-ink/60">{f.description}</p>
+          </Card>
+        ))}
+      </div>
+
+      <AuthCard />
     </div>
   );
 }
