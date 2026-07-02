@@ -1,11 +1,18 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
 import { initials } from "@/lib/format";
 
 /**
- * Round member photo, or a brand-tinted initials circle when no photo.
- * Photos carry a hairline #cfdbe2 ring to match the flat-border brand language.
- * Photo hosts must be allowed in next.config.ts images.remotePatterns
- * (licdn.com / googleusercontent.com are).
+ * Round member photo, or a brand-tinted initials circle when there's no photo
+ * (or the photo fails to load — LinkedIn's media.licdn.com often blocks
+ * hotlinking, so we fall back gracefully instead of showing a broken image).
+ *
+ * Uses a plain <img> on purpose: member photos are remote LinkedIn/Google URLs,
+ * and routing them through Next's on-container image optimizer added real
+ * latency (a server-side fetch + re-encode per avatar) and could hang on
+ * licdn throttling. A direct, lazy <img> lets the browser fetch them
+ * off the critical path — the page renders instantly, photos fill in after.
  */
 export default function Avatar({
   src,
@@ -18,13 +25,20 @@ export default function Avatar({
   size?: number;
   className?: string;
 }) {
-  if (src) {
+  const [failed, setFailed] = useState(false);
+
+  if (src && !failed) {
     return (
-      <Image
+      // eslint-disable-next-line @next/next/no-img-element -- remote avatars are intentionally unoptimized (see file header)
+      <img
         src={src}
         alt={name}
         width={size}
         height={size}
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onError={() => setFailed(true)}
         className={`rounded-full object-cover ring-1 ring-border ${className}`}
         style={{ width: size, height: size }}
       />
@@ -34,7 +48,11 @@ export default function Avatar({
     <span
       aria-hidden="true"
       className={`inline-flex select-none items-center justify-center rounded-full bg-brand/10 font-semibold text-brand ${className}`}
-      style={{ width: size, height: size, fontSize: Math.max(10, Math.round(size * 0.38)) }}
+      style={{
+        width: size,
+        height: size,
+        fontSize: Math.max(10, Math.round(size * 0.38)),
+      }}
     >
       {initials(name)}
     </span>

@@ -9,8 +9,12 @@ export const metadata: Metadata = {
 };
 
 export default async function DirectoryPage() {
-  const { member } = await requireMember();
-  const members = await listMembers();
+  // Run the auth/member check and the members query concurrently — they don't
+  // depend on each other, so this saves a Firestore round-trip on every load.
+  const [{ member }, members] = await Promise.all([
+    requireMember(),
+    listMembers(),
+  ]);
   const firstName = member.name.split(' ')[0];
 
   return (

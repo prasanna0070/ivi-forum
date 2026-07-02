@@ -21,7 +21,9 @@ gcloud run deploy "$SERVICE" \
   --cpu=1 \
   --timeout=300 \
   --concurrency=80 \
+  --min-instances=1 \
   --max-instances=3 \
+  --cpu-boost \
   --set-secrets="AUTH_SECRET=ivi-forum-auth-secret:latest,APIFY_API_TOKEN=ivi-forum-apify-token:latest" \
   --set-env-vars="GCP_PROJECT=${PROJECT},AUTH_URL=${APP_URL},AUTH_TRUST_HOST=true,APIFY_LINKEDIN_PROFILE_ACTOR=apimaestro~linkedin-profile-batch-scraper-no-cookies-required"
 
