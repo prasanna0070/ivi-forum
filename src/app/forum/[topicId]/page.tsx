@@ -3,13 +3,13 @@
  * reply composer. Server component; params/searchParams are Promises (Next 16).
  */
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import ReplyComposer from '@/components/forum/ReplyComposer';
 import VoteWidget from '@/components/forum/VoteWidget';
 import { getTopic, getVotesForUser, listReplies, type ReplySort } from '@/lib/firestore';
 import { timeAgo } from '@/lib/format';
 import { requireMember } from '@/lib/session';
+import IviArrow from '@/components/IviArrow';
 
 const REPLY_TABS: { key: ReplySort; label: string }[] = [
   { key: 'new', label: 'New' },
@@ -22,7 +22,7 @@ function BackLink() {
       href="/forum"
       className="group inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition-colors hover:text-brand-light"
     >
-      <ArrowLeft
+      <IviArrow dir="left"
         strokeWidth={2}
         className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-1"
         aria-hidden="true"
@@ -52,7 +52,7 @@ export default async function TopicPage({
       <div className="mx-auto w-full max-w-3xl">
         <BackLink />
         <div className="mt-6 rounded-card border border-border bg-white p-10 text-center">
-          <p className="font-serif text-xl font-semibold text-heading">Topic not found</p>
+          <p className="font-serif text-xl font-medium text-heading">Topic not found</p>
           <p className="mt-1 text-sm text-muted">
             It may have been removed, or the link is wrong.
           </p>
@@ -60,7 +60,7 @@ export default async function TopicPage({
             href="/forum"
             className="group mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-brand bg-brand px-6 py-3 text-base font-semibold text-white transition-all hover:bg-brand-light active:bg-brand-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-heading/40"
           >
-            <ArrowLeft
+            <IviArrow dir="left"
               strokeWidth={2}
               className="h-5 w-5 transition-transform duration-200 group-hover:-translate-x-1"
               aria-hidden="true"
@@ -90,7 +90,7 @@ export default async function TopicPage({
             myVote={myVotes[topic.id] ?? null}
           />
           <div className="min-w-0 flex-1">
-            <h1 className="font-serif text-[1.75rem] font-semibold leading-tight text-heading md:text-[2rem]">
+            <h1 className="font-serif text-[1.75rem] font-medium leading-tight text-heading md:text-[2rem]">
               {topic.title}
             </h1>
             {topic.tags.length > 0 && (
@@ -134,7 +134,7 @@ export default async function TopicPage({
 
       {/* Replies */}
       <div className="mt-8 flex items-center justify-between gap-4">
-        <h2 className="font-serif text-xl font-semibold text-heading md:text-2xl">
+        <h2 className="font-serif text-xl font-medium text-heading md:text-2xl">
           {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
         </h2>
         <nav aria-label="Sort replies" className="flex items-center gap-4">

@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowLeft, ArrowUpRight, MapPin, Pencil } from 'lucide-react';
+import { MapPin, Pencil } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import LinkedInIcon from '@/components/directory/LinkedInIcon';
 import { getMember } from '@/lib/firestore';
 import { requireMember } from '@/lib/session';
 import type { MemberProfile } from '@/lib/types';
+import IviArrow from '@/components/IviArrow';
 
 export const metadata: Metadata = { title: 'Profile · iVi Forum' };
 
@@ -27,7 +28,7 @@ function CohortChip({ cohort }: { cohort: number }) {
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="rounded-card border border-border bg-white p-6 sm:p-7">
-      <h2 className="font-serif text-xl font-semibold text-heading sm:text-2xl">{title}</h2>
+      <h2 className="font-serif text-xl font-medium text-heading sm:text-2xl">{title}</h2>
       <div className="mt-4">{children}</div>
     </section>
   );
@@ -38,7 +39,7 @@ function MemberNotFound() {
     <main className="min-h-screen bg-surface">
       <div className="mx-auto max-w-xl px-4 py-16 sm:px-6">
         <div className="rounded-card border border-border bg-white p-10 text-center">
-          <h1 className="font-serif text-2xl font-semibold text-heading">
+          <h1 className="font-serif text-2xl font-medium text-heading">
             This member hasn’t joined yet
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-muted">
@@ -49,7 +50,7 @@ function MemberNotFound() {
             href="/directory"
             className="group mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-brand bg-brand px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-brand-light"
           >
-            <ArrowLeft
+            <IviArrow dir="left"
               strokeWidth={2}
               aria-hidden="true"
               className="h-4 w-4 transition-transform group-hover:-translate-x-1"
@@ -95,7 +96,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
           href="/directory"
           className="group mb-6 inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition-colors hover:text-brand-light"
         >
-          <ArrowLeft
+          <IviArrow dir="left"
             strokeWidth={2}
             aria-hidden="true"
             className="h-4 w-4 transition-transform group-hover:-translate-x-1"
@@ -110,7 +111,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
               <Avatar src={member.photoUrl} name={member.name} size={96} className="shrink-0" />
 
               <div className="min-w-0 flex-1">
-                <h1 className="font-serif text-3xl font-semibold text-heading sm:text-4xl">
+                <h1 className="font-serif text-3xl font-medium text-heading sm:text-4xl">
                   {member.name}
                 </h1>
                 {member.headline && (
@@ -148,7 +149,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
                     >
                       <LinkedInIcon className="h-4 w-4" />
                       LinkedIn
-                      <ArrowUpRight
+                      <IviArrow dir="right-slant"
                         strokeWidth={2}
                         aria-hidden="true"
                         className="h-4 w-4 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1"
@@ -197,7 +198,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
                   <span className="underline underline-offset-4">
                     {member.startupWebsite.replace(/^https?:\/\//i, '').replace(/\/$/, '')}
                   </span>
-                  <ArrowUpRight
+                  <IviArrow dir="right-slant"
                     strokeWidth={2}
                     aria-hidden="true"
                     className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"

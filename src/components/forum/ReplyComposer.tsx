@@ -6,7 +6,7 @@
  */
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
-import { ArrowRight } from 'lucide-react';
+import IviArrow from '@/components/IviArrow';
 
 export default function ReplyComposer({ topicId }: { topicId: string }) {
   const router = useRouter();
@@ -71,7 +71,7 @@ export default function ReplyComposer({ topicId }: { topicId: string }) {
         >
           {pending ? 'Posting…' : 'Reply'}
           {!pending && (
-            <ArrowRight
+            <IviArrow dir="right"
               strokeWidth={2}
               className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-2"
               aria-hidden="true"

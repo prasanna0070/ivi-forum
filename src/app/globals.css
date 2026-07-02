@@ -83,7 +83,10 @@ body {
   h2,
   h3 {
     font-family: var(--font-serif);
-    font-weight: 600;
+    /* ISB display headings are light (reckless 300–400) with near-zero tracking,
+       not bold — this is what gives the brand its refined, editorial feel. */
+    font-weight: 500;
+    letter-spacing: -0.01em;
     color: var(--color-heading);
   }
   h4,

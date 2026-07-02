@@ -7,8 +7,9 @@
  */
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, ArrowRight, Plus, X } from 'lucide-react';
+import { AlertCircle, Plus, X } from 'lucide-react';
 import Avatar from '@/components/Avatar';
+import IviArrow from '@/components/IviArrow';
 import { ChipInput } from '@/components/onboarding/ChipInput';
 import {
   EMPTY_EDUCATION_ROW,
@@ -63,7 +64,7 @@ function SectionCard({
 }) {
   return (
     <section className="rounded-card border border-border bg-white p-6 sm:p-8">
-      <h2 className="font-serif text-xl font-semibold text-heading sm:text-2xl">{title}</h2>
+      <h2 className="font-serif text-xl font-medium text-heading sm:text-2xl">{title}</h2>
       {hint && <p className="mt-1 text-sm text-muted">{hint}</p>}
       <div className="mt-5 space-y-4">{children}</div>
     </section>
@@ -462,7 +463,7 @@ export function ProfileForm({ initialValues, editMode }: ProfileFormProps) {
             className="group inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-none border border-brand bg-brand px-6 py-3 text-base font-semibold text-white transition-colors hover:border-brand-light hover:bg-brand-light active:bg-brand-dark disabled:cursor-not-allowed disabled:border-[#c6c6c6] disabled:bg-transparent disabled:text-[#c6c6c6] sm:w-auto"
           >
             {saving ? 'Saving…' : editMode ? 'Save changes' : 'Save profile'}
-            <ArrowRight
+            <IviArrow dir="right"
               aria-hidden
               strokeWidth={2}
               className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-[8px]"

@@ -94,7 +94,7 @@ export default function DirectoryGrid({ members }: { members: MemberProfile[] })
 
       {shown.length === 0 ? (
         <div className="mt-6 rounded-card border border-border bg-white px-6 py-16 text-center">
-          <p className="font-serif text-lg font-semibold text-heading">
+          <p className="font-serif text-lg font-medium text-heading">
             No members match — try another search.
           </p>
         </div>

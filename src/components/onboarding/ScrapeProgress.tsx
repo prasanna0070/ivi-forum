@@ -36,7 +36,7 @@ export function ScrapeProgress() {
       <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted">
         Setting up your profile
       </p>
-      <h1 className="mt-2 font-serif text-2xl font-semibold text-heading sm:text-3xl">
+      <h1 className="mt-2 font-serif text-2xl font-medium text-heading sm:text-3xl">
         Building your profile
       </h1>
 

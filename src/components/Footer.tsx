@@ -5,7 +5,7 @@
  */
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import IviArrow from "@/components/IviArrow";
 
 const linkClass =
   "text-[15px] leading-[2.2] text-white/85 transition-colors hover:text-accent";
@@ -55,7 +55,7 @@ export default function Footer() {
                   className={`inline-flex items-center gap-1 ${linkClass}`}
                 >
                   Open source on GitHub
-                  <ArrowUpRight size={15} strokeWidth={2} />
+                  <IviArrow dir="right-slant" size={15} strokeWidth={2} />
                 </a>
               </li>
               <li>
@@ -66,7 +66,7 @@ export default function Footer() {
                   className={`inline-flex items-center gap-1 ${linkClass}`}
                 >
                   Powered by Quarktex Co&apos;4
-                  <ArrowUpRight size={15} strokeWidth={2} />
+                  <IviArrow dir="right-slant" size={15} strokeWidth={2} />
                 </a>
               </li>
             </ul>
@@ -84,7 +84,7 @@ export default function Footer() {
                   className={`inline-flex items-center gap-1 ${linkClass}`}
                 >
                   I-Venture @ ISB
-                  <ArrowUpRight size={15} strokeWidth={2} />
+                  <IviArrow dir="right-slant" size={15} strokeWidth={2} />
                 </a>
               </li>
               <li>
@@ -95,7 +95,7 @@ export default function Footer() {
                   className={`inline-flex items-center gap-1 ${linkClass}`}
                 >
                   ISB
-                  <ArrowUpRight size={15} strokeWidth={2} />
+                  <IviArrow dir="right-slant" size={15} strokeWidth={2} />
                 </a>
               </li>
             </ul>

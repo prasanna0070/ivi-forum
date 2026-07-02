@@ -14,8 +14,9 @@ import {
   type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
-import { ArrowRight, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { MAX_TAGS, slugifyTag } from './tags';
+import IviArrow from '@/components/IviArrow';
 
 const inputClass =
   'w-full rounded-input border border-border bg-white px-3 py-2.5 text-base text-ink placeholder:text-placeholder transition-colors focus:border-heading focus:outline-2 focus:-outline-offset-2 focus:outline-heading/30';
@@ -100,7 +101,7 @@ export default function TopicComposer() {
         className="group inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-brand bg-brand px-6 py-3 text-base font-semibold text-white transition-all hover:bg-brand-light active:bg-brand-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-heading/40 sm:w-auto"
       >
         Start a topic
-        <ArrowRight
+        <IviArrow dir="right"
           strokeWidth={2}
           className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-2"
           aria-hidden="true"
@@ -123,7 +124,7 @@ export default function TopicComposer() {
           >
             {/* Header — stays in view while the body scrolls */}
             <div className="flex items-center justify-between gap-4 border-b border-border px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] md:px-6 md:pt-4">
-              <h2 id="topic-composer-heading" className="font-serif text-xl font-semibold text-heading">
+              <h2 id="topic-composer-heading" className="font-serif text-xl font-medium text-heading">
                 Start a topic
               </h2>
               <button
@@ -224,7 +225,7 @@ export default function TopicComposer() {
               >
                 {pending ? 'Posting…' : 'Post topic'}
                 {!pending && (
-                  <ArrowRight
+                  <IviArrow dir="right"
                     strokeWidth={2}
                     className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-2"
                     aria-hidden="true"

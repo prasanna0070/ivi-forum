@@ -10,7 +10,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { ArrowRight } from "lucide-react";
+import IviArrow from "@/components/IviArrow";
 
 type Tab = "signin" | "signup";
 
@@ -170,7 +170,7 @@ export default function AuthCard() {
             {pending && <Spinner />}
             {pending ? "Creating your account…" : "Create account"}
             {!pending && (
-              <ArrowRight
+              <IviArrow dir="right"
                 size={20}
                 strokeWidth={2}
                 className="transition-transform duration-200 group-hover:translate-x-2"
@@ -209,7 +209,7 @@ export default function AuthCard() {
             {pending && <Spinner />}
             {pending ? "Signing in…" : "Sign in"}
             {!pending && (
-              <ArrowRight
+              <IviArrow dir="right"
                 size={20}
                 strokeWidth={2}
                 className="transition-transform duration-200 group-hover:translate-x-2"

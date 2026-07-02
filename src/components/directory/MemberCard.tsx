@@ -32,7 +32,7 @@ export default function MemberCard({ member }: { member: MemberProfile }) {
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="truncate font-serif text-lg font-semibold text-heading transition-colors group-hover:text-brand-light">
+            <h3 className="truncate font-serif text-lg font-medium text-heading transition-colors group-hover:text-brand-light">
               {member.name}
             </h3>
             {member.linkedinUrl && (

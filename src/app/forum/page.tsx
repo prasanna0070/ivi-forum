@@ -40,7 +40,7 @@ export default async function ForumPage({
   return (
     <div className="mx-auto w-full max-w-3xl">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="font-serif text-[2rem] font-semibold leading-tight text-heading md:text-[2.5rem]">
+        <h1 className="font-serif text-[2rem] font-medium leading-tight text-heading md:text-[2.5rem]">
           Forum
         </h1>
         <TopicComposer />
@@ -72,7 +72,7 @@ export default async function ForumPage({
             <span className="mx-auto flex h-11 w-11 items-center justify-center border-2 border-brand text-brand">
               <MessageSquare strokeWidth={2} className="h-5 w-5" aria-hidden="true" />
             </span>
-            <p className="mt-4 font-serif text-xl font-semibold text-heading">
+            <p className="mt-4 font-serif text-xl font-medium text-heading">
               No topics yet — start the first discussion.
             </p>
             <p className="mt-1 text-sm text-muted">

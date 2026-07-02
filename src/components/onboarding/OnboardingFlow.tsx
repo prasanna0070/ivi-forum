@@ -7,11 +7,12 @@
  *   3. 'form'     — editable profile form (prefilled from scrape / existing member)
  */
 import { useState } from 'react';
-import { ArrowRight, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { ProfileForm } from '@/components/onboarding/ProfileForm';
 import { ScrapeProgress } from '@/components/onboarding/ScrapeProgress';
 import { toFormValues, type ProfileFormValues } from '@/components/onboarding/formValues';
 import type { MemberProfile } from '@/lib/types';
+import IviArrow from '@/components/IviArrow';
 
 type Step = 'linkedin' | 'scraping' | 'form';
 
@@ -106,7 +107,7 @@ export function OnboardingFlow({ userName, editMode, initialProfile }: Onboardin
       <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted">
         Set up your profile
       </p>
-      <h1 className="mt-2 font-serif text-3xl font-semibold leading-[1.1] text-heading sm:text-4xl">
+      <h1 className="mt-2 font-serif text-3xl font-medium leading-[1.1] text-heading sm:text-4xl">
         Welcome, {userName}
       </h1>
       <p className="mt-4 max-w-prose text-ink">
@@ -135,7 +136,7 @@ export function OnboardingFlow({ userName, editMode, initialProfile }: Onboardin
           className="group inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-none border border-brand bg-brand px-6 py-3 text-base font-semibold text-white transition-colors hover:border-brand-light hover:bg-brand-light active:bg-brand-dark sm:w-auto"
         >
           Build my profile
-          <ArrowRight
+          <IviArrow dir="right"
             aria-hidden
             strokeWidth={2}
             className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-[8px]"

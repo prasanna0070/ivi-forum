@@ -58,7 +58,7 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
             <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted">
               Your profile
             </p>
-            <h1 className="mt-2 font-serif text-3xl font-semibold leading-[1.1] text-heading sm:text-4xl">
+            <h1 className="mt-2 font-serif text-3xl font-medium leading-[1.1] text-heading sm:text-4xl">
               Edit your profile
             </h1>
             <p className="mt-4 max-w-prose text-ink">

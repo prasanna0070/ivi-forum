@@ -9,11 +9,12 @@
  */
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { Users, MessageSquare, Zap, ArrowRight } from "lucide-react";
+import { Users, MessageSquare, Zap } from "lucide-react";
 import { auth } from "@/auth";
 import { getMember } from "@/lib/firestore";
 import AuthCard from "@/components/AuthCard";
 import Card from "@/components/Card";
+import IviArrow from "@/components/IviArrow";
 
 const FEATURES: {
   title: string;
@@ -62,7 +63,7 @@ export default async function Home() {
           <p className="mt-8 text-[13px] font-semibold uppercase tracking-[0.08em] text-white/70">
             The I-Venture @ ISB community
           </p>
-          <h1 className="mt-3 font-serif text-[40px] font-semibold leading-[1.1] text-white md:text-display">
+          <h1 className="mt-3 font-serif text-[40px] font-normal leading-[1.1] tracking-[-0.01em] text-white md:text-display">
             Every cohort. One room.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-white/85 md:text-lg">
@@ -74,7 +75,7 @@ export default async function Home() {
             className="group mt-8 inline-flex min-h-[44px] items-center justify-center gap-2 border border-white bg-white px-6 text-base font-semibold text-brand transition-colors hover:border-mint hover:bg-mint"
           >
             Join the community
-            <ArrowRight
+            <IviArrow dir="right"
               size={20}
               strokeWidth={2}
               className="transition-transform duration-200 group-hover:translate-x-2"
@@ -103,7 +104,7 @@ export default async function Home() {
             {FEATURES.map(({ title, description, Icon }) => (
               <Card key={title} className="p-6">
                 <Icon size={24} strokeWidth={2} className="text-brand" />
-                <h3 className="mt-4 font-serif text-xl font-semibold text-heading">
+                <h3 className="mt-4 font-serif text-xl font-medium text-heading">
                   {title}
                 </h3>
                 <p className="mt-2 text-[15px] leading-relaxed text-ink">
