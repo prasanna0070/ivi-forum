@@ -10,7 +10,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { Users, MessageSquare, Zap } from "lucide-react";
-import { auth } from "@/auth";
+import { auth, microsoftEnabled } from "@/auth";
 import { getMember } from "@/lib/firestore";
 import AuthCard from "@/components/AuthCard";
 import Card from "@/components/Card";
@@ -131,7 +131,7 @@ export default async function Home() {
               builds itself from LinkedIn.
             </p>
           </div>
-          <AuthCard />
+          <AuthCard microsoftEnabled={microsoftEnabled} />
         </div>
       </section>
     </div>

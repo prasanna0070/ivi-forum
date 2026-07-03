@@ -29,10 +29,16 @@ export interface EducationItem {
 export interface AuthRecord {
   /** Lowercased email (also the doc id). */
   email: string;
-  /** Random UUID minted at signup → key of `ivi_users`. */
+  /** Random UUID minted at signup / first OAuth login → key of `ivi_users`. */
   uid: string;
-  /** bcryptjs hash, cost 10. Never returned by any API. */
-  passwordHash: string;
+  /**
+   * bcryptjs hash, cost 10. Absent for accounts created via OAuth (Microsoft) —
+   * such accounts can only sign in through their provider, never with a password.
+   * Never returned by any API.
+   */
+  passwordHash?: string;
+  /** How the account was first created. */
+  provider?: 'password' | 'microsoft';
   createdAt: number;
 }
 

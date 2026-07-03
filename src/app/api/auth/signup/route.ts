@@ -11,6 +11,7 @@
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { createAuthUser } from "@/lib/firestore";
+import { isEmailAllowed } from "@/lib/access";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -39,16 +40,10 @@ export async function POST(req: Request) {
     return bad(400, "Password must be at least 8 characters.");
   }
 
-  // Optional domain gate: ALLOWED_EMAIL_DOMAINS=isb.edu,example.com
-  const allowedDomains = (process.env.ALLOWED_EMAIL_DOMAINS ?? "")
-    .split(",")
-    .map((d) => d.trim().toLowerCase())
-    .filter(Boolean);
-  if (allowedDomains.length > 0) {
-    const domain = emailStr.split("@")[1] ?? "";
-    if (!allowedDomains.includes(domain)) {
-      return bad(403, "Signups are limited to approved email domains.");
-    }
+  // Membership gate (shared with Microsoft sign-in): ALLOWED_EMAIL_DOMAINS +
+  // ALLOWED_EMAILS. Unconfigured = open.
+  if (!isEmailAllowed(emailStr)) {
+    return bad(403, "Sign-ups are limited to ISB (@isb.edu) email addresses.");
   }
 
   const passwordHash = await hash(password, 10);

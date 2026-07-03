@@ -11,6 +11,25 @@ RUNTIME_SA="ivi-forum-run@${PROJECT}.iam.gserviceaccount.com"
 # Cloud Run URLs are deterministic per project; verified against sibling services.
 APP_URL="${APP_URL:-https://ivi-forum-mzbkxhm73q-el.a.run.app}"
 
+# Membership gate: only ISB emails may join, plus an allowlist for existing
+# members who signed up with a personal address.
+ALLOWED_EMAIL_DOMAINS="${ALLOWED_EMAIL_DOMAINS:-isb.edu}"
+ALLOWED_EMAILS="${ALLOWED_EMAILS:-ayush.vasana@gmail.com}"
+
+SECRETS="AUTH_SECRET=ivi-forum-auth-secret:latest,APIFY_API_TOKEN=ivi-forum-apify-token:latest"
+ENV_VARS="GCP_PROJECT=${PROJECT},AUTH_URL=${APP_URL},AUTH_TRUST_HOST=true"
+ENV_VARS="${ENV_VARS},APIFY_LINKEDIN_PROFILE_ACTOR=apimaestro~linkedin-profile-batch-scraper-no-cookies-required"
+ENV_VARS="${ENV_VARS},ALLOWED_EMAIL_DOMAINS=${ALLOWED_EMAIL_DOMAINS},ALLOWED_EMAILS=${ALLOWED_EMAILS}"
+
+# Microsoft (Entra ID) OAuth activates automatically once its secrets exist.
+if gcloud secrets describe ivi-forum-ms-client-id --project="$PROJECT" >/dev/null 2>&1; then
+  SECRETS="${SECRETS},AUTH_MICROSOFT_ENTRA_ID_ID=ivi-forum-ms-client-id:latest,AUTH_MICROSOFT_ENTRA_ID_SECRET=ivi-forum-ms-client-secret:latest"
+  ENV_VARS="${ENV_VARS},AUTH_MICROSOFT_ENTRA_ID_ISSUER=${MS_ISSUER:-https://login.microsoftonline.com/common/v2.0}"
+  echo "Microsoft OAuth: ENABLED (secrets found)"
+else
+  echo "Microsoft OAuth: dormant (create ivi-forum-ms-client-id / -secret to enable)"
+fi
+
 gcloud run deploy "$SERVICE" \
   --source . \
   --project="$PROJECT" \
@@ -24,8 +43,8 @@ gcloud run deploy "$SERVICE" \
   --min-instances=1 \
   --max-instances=3 \
   --cpu-boost \
-  --set-secrets="AUTH_SECRET=ivi-forum-auth-secret:latest,APIFY_API_TOKEN=ivi-forum-apify-token:latest" \
-  --set-env-vars="GCP_PROJECT=${PROJECT},AUTH_URL=${APP_URL},AUTH_TRUST_HOST=true,APIFY_LINKEDIN_PROFILE_ACTOR=apimaestro~linkedin-profile-batch-scraper-no-cookies-required"
+  --set-secrets="$SECRETS" \
+  --set-env-vars="$ENV_VARS"
 
 echo "Done. URL:"
 gcloud run services describe "$SERVICE" --project="$PROJECT" --region="$REGION" --format='value(status.url)'

@@ -30,7 +30,11 @@ const labelClass = "text-sm font-semibold text-ink";
 const submitClass =
   "group mt-1 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-brand bg-brand px-6 text-base font-semibold text-white transition-colors hover:bg-brand-light active:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60";
 
-export default function AuthCard() {
+export default function AuthCard({
+  microsoftEnabled = false,
+}: {
+  microsoftEnabled?: boolean;
+}) {
   const [tab, setTab] = useState<Tab>("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -102,8 +106,40 @@ export default function AuthCard() {
     }
   }
 
+  function handleMicrosoft() {
+    setError(null);
+    // Full OAuth redirect flow. New members land on /directory, which bounces
+    // them to /onboarding when their profile isn't complete yet.
+    void signIn("microsoft-entra-id", { callbackUrl: "/directory" });
+  }
+
   return (
     <div className="w-full max-w-md rounded-card border border-border bg-white p-6 shadow-card sm:p-8">
+      {microsoftEnabled && (
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={handleMicrosoft}
+            className="group inline-flex min-h-[44px] w-full items-center justify-center gap-2.5 rounded-brand border border-border bg-white px-4 text-sm font-semibold text-ink transition-colors hover:border-brand hover:bg-surface-2"
+          >
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 21 21">
+              <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+              <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+              <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+              <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+            </svg>
+            Continue with Microsoft
+          </button>
+          <p className="mt-2 text-center text-xs text-muted">
+            Use your ISB email to verify you&apos;re part of the community.
+          </p>
+          <div className="mt-5 flex items-center gap-3 text-xs text-muted">
+            <span className="h-px flex-1 bg-border" />
+            or with email
+            <span className="h-px flex-1 bg-border" />
+          </div>
+        </div>
+      )}
       <div className="mb-6 flex border-b border-border">
         {(
           [

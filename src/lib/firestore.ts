@@ -107,6 +107,65 @@ export async function createAuthUser(input: {
   return created ? { ok: true, uid } : { ok: false, error: 'email-exists' };
 }
 
+/**
+ * Find-or-create an account for a verified OAuth (Microsoft) sign-in, keyed by
+ * email. If an `ivi_auth/{email}` already exists (password or prior OAuth), its
+ * uid is reused — so signing in with Microsoft LINKS to the same profile as a
+ * pre-existing password account with that email. Otherwise a fresh skeleton
+ * profile (profileComplete=false) is minted. Never stores a password.
+ * Returns the uid and whether the profile was newly created.
+ */
+export async function ensureOAuthUser(input: {
+  email: string;
+  name: string;
+}): Promise<{ uid: string; isNew: boolean }> {
+  const emailLower = input.email.trim().toLowerCase();
+  const authRef = db.collection(AUTH).doc(emailLower);
+  const now = Date.now();
+
+  return db.runTransaction(async (tx) => {
+    const existing = await tx.get(authRef);
+    if (existing.exists) {
+      return { uid: (existing.data() as AuthRecord).uid, isNew: false };
+    }
+    const uid = randomUUID();
+    const authRecord: AuthRecord = {
+      email: emailLower,
+      uid,
+      provider: 'microsoft',
+      createdAt: now,
+    };
+    const skeleton: MemberProfile = {
+      uid,
+      email: emailLower,
+      name: input.name || emailLower,
+      photoUrl: null,
+      linkedinUrl: null,
+      headline: null,
+      about: null,
+      location: null,
+      cohort: null,
+      startupName: null,
+      startupDescription: null,
+      startupWebsite: null,
+      currentTitle: null,
+      currentCompany: null,
+      skills: [],
+      experience: [],
+      education: [],
+      followerCount: null,
+      connectionCount: null,
+      profileComplete: false,
+      lastScrapeAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    tx.create(authRef, authRecord);
+    tx.set(db.collection(USERS).doc(uid), skeleton);
+    return { uid, isNew: true };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Members (ivi_users)
 // ---------------------------------------------------------------------------
