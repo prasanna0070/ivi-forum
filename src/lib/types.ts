@@ -38,7 +38,23 @@ export interface AuthRecord {
    */
   passwordHash?: string;
   /** How the account was first created. */
-  provider?: 'password' | 'microsoft';
+  provider?: 'password' | 'microsoft' | 'otp';
+  createdAt: number;
+}
+
+/**
+ * `ivi_otp/{emailLower}` — a pending email one-time-code (passwordless sign-in).
+ * The code itself is bcrypt-hashed; short-lived and attempt-limited.
+ */
+export interface OtpRecord {
+  email: string; // lowercased (also the doc id)
+  codeHash: string; // bcrypt hash of the 6-digit code
+  name: string; // provisional display name for a brand-new account
+  expiresAt: number; // epoch ms
+  attempts: number; // verify attempts used against the current code
+  sendCount: number; // codes sent in the current rolling window
+  windowStartedAt: number; // epoch ms — start of the send-count window
+  lastSentAt: number; // epoch ms
   createdAt: number;
 }
 

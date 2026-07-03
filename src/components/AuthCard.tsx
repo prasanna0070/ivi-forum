@@ -1,17 +1,24 @@
 "use client";
 
 /**
- * Sign in / Sign up card for the landing page.
- * Sign up → POST /api/auth/signup → credentials signIn → /onboarding.
- * Sign in → credentials signIn → /directory.
- * Squared underline-bar tabs, recipe inputs (16px on mobile → no iOS zoom),
- * zero-radius CTA with an arrow that slides on hover.
+ * Sign-in card for the landing page.
+ *
+ * When email OTP is configured (`otpEnabled`), the verified passwordless flow is
+ * primary: enter ISB email → get a 6-digit code → verify → in. Email + password
+ * remains available as a fallback for existing accounts. When OTP isn't
+ * configured, only the password tabs show.
+ *
+ * Post-auth navigation is a hard `window.location.assign` on purpose — a soft
+ * router.push raced the auth proxy redirect and wedged the client (see git
+ * history). A real navigation loads the member area cleanly every time.
  */
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import IviArrow from "@/components/IviArrow";
 
 type Tab = "signin" | "signup";
+type Mode = "otp" | "password";
+type OtpStep = "email" | "code";
 
 function Spinner() {
   return (
@@ -24,46 +31,57 @@ function Spinner() {
 
 const inputClass =
   "w-full rounded-input border border-border bg-white px-3 py-2.5 text-base text-ink placeholder:text-placeholder focus:border-heading focus:[outline:2px_solid_rgba(30,45,140,0.3)] focus:[outline-offset:-2px]";
-
 const labelClass = "text-sm font-semibold text-ink";
-
 const submitClass =
   "group mt-1 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-brand bg-brand px-6 text-base font-semibold text-white transition-colors hover:bg-brand-light active:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60";
 
 export default function AuthCard({
-  microsoftEnabled = false,
+  otpEnabled = false,
 }: {
-  microsoftEnabled?: boolean;
+  otpEnabled?: boolean;
 }) {
-  const [tab, setTab] = useState<Tab>("signin");
+  const [mode, setMode] = useState<Mode>(otpEnabled ? "otp" : "password");
+
+  // shared
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function switchTab(next: Tab) {
-    setTab(next);
+  // OTP
+  const [otpStep, setOtpStep] = useState<OtpStep>("email");
+  const [code, setCode] = useState("");
+  const [sentTo, setSentTo] = useState("");
+
+  // password
+  const [tab, setTab] = useState<Tab>("signin");
+  const [password, setPassword] = useState("");
+
+  function resetMsgs() {
     setError(null);
   }
 
-  async function handleSignIn(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError(null);
+  // ── OTP ──────────────────────────────────────────────────────────────────
+  async function requestCode(e?: React.FormEvent) {
+    e?.preventDefault();
+    resetMsgs();
     setPending(true);
     try {
-      const res = await signIn("credentials", { email, password, redirect: false });
-      if (res?.error) {
-        setError("Wrong email or password.");
-        return;
+      const res = await fetch("/api/auth/otp/request", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, email }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { ok?: boolean; error?: string }
+        | null;
+      if (res.ok && data?.ok) {
+        setSentTo(email.trim().toLowerCase());
+        setOtpStep("code");
+        setCode("");
+      } else {
+        setError(data?.error ?? "Could not send a code — please try again.");
       }
-      // Hard navigation (full document load) on purpose. A soft router.push +
-      // refresh here raced with the proxy's auth redirect and the landing's own
-      // authed redirect, leaving the client stuck on a blank, dead page until a
-      // manual reload. A real navigation loads /directory cleanly with the fresh
-      // session cookie every time.
-      window.location.assign("/directory");
-      return;
     } catch {
       setError("Something went wrong — please try again.");
     } finally {
@@ -71,9 +89,50 @@ export default function AuthCard({
     }
   }
 
+  async function verifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    resetMsgs();
+    setPending(true);
+    try {
+      const res = await signIn("otp", {
+        email: sentTo,
+        code: code.trim(),
+        redirect: false,
+      });
+      if (res?.error) {
+        setError("That code is invalid or expired — check it or resend.");
+        setPending(false);
+        return;
+      }
+      window.location.assign("/directory");
+    } catch {
+      setError("Something went wrong — please try again.");
+      setPending(false);
+    }
+  }
+
+  // ── password (fallback) ────────────────────────────────────────────────────
+  async function handleSignIn(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    resetMsgs();
+    setPending(true);
+    try {
+      const res = await signIn("credentials", { email, password, redirect: false });
+      if (res?.error) {
+        setError("Wrong email or password.");
+        setPending(false);
+        return;
+      }
+      window.location.assign("/directory");
+    } catch {
+      setError("Something went wrong — please try again.");
+      setPending(false);
+    }
+  }
+
   async function handleSignUp(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
+    resetMsgs();
     setPending(true);
     try {
       const res = await fetch("/api/auth/signup", {
@@ -83,63 +142,167 @@ export default function AuthCard({
       });
       if (res.status === 409) {
         setError("An account with this email already exists — sign in instead.");
+        setPending(false);
         return;
       }
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
         setError(data?.error ?? "Could not create your account — please try again.");
+        setPending(false);
         return;
       }
       const login = await signIn("credentials", { email, password, redirect: false });
       if (login?.error) {
-        // Account exists but auto-login failed — let them sign in manually.
-        switchTab("signin");
+        setTab("signin");
         setError("Account created — please sign in.");
+        setPending(false);
         return;
       }
-      window.location.assign("/onboarding"); // hard nav — see handleSignIn note
-      return;
+      window.location.assign("/onboarding");
     } catch {
       setError("Something went wrong — please try again.");
-    } finally {
       setPending(false);
     }
   }
 
-  function handleMicrosoft() {
-    setError(null);
-    // Full OAuth redirect flow. New members land on /directory, which bounces
-    // them to /onboarding when their profile isn't complete yet.
-    void signIn("microsoft-entra-id", { callbackUrl: "/directory" });
-  }
+  const cardClass =
+    "w-full max-w-md rounded-card border border-border bg-white p-6 shadow-card sm:p-8";
 
-  return (
-    <div className="w-full max-w-md rounded-card border border-border bg-white p-6 shadow-card sm:p-8">
-      {microsoftEnabled && (
-        <div className="mb-6">
+  // ── OTP mode ───────────────────────────────────────────────────────────────
+  if (otpEnabled && mode === "otp") {
+    return (
+      <div className={cardClass}>
+        {otpStep === "email" ? (
+          <form onSubmit={requestCode} className="flex flex-col gap-4">
+            <div>
+              <h2 className="font-serif text-xl font-medium text-heading">
+                Sign in with your ISB email
+              </h2>
+              <p className="mt-1 text-sm text-muted">
+                We&apos;ll email you a 6-digit code. Membership is limited to
+                I-Venture @ ISB (@isb.edu).
+              </p>
+            </div>
+            <label className={labelClass}>
+              Name{" "}
+              <span className="font-normal text-muted">(new members)</span>
+              <input
+                type="text"
+                maxLength={80}
+                autoComplete="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your full name"
+                className={`mt-1.5 ${inputClass}`}
+              />
+            </label>
+            <label className={labelClass}>
+              ISB email
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@isb.edu"
+                className={`mt-1.5 ${inputClass}`}
+              />
+            </label>
+            {error && <p className="text-sm text-danger">{error}</p>}
+            <button type="submit" disabled={pending} className={submitClass}>
+              {pending && <Spinner />}
+              {pending ? "Sending code…" : "Email me a code"}
+              {!pending && (
+                <IviArrow
+                  dir="right"
+                  size={20}
+                  className="transition-transform duration-200 group-hover:translate-x-2"
+                />
+              )}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={verifyCode} className="flex flex-col gap-4">
+            <div>
+              <h2 className="font-serif text-xl font-medium text-heading">
+                Enter your code
+              </h2>
+              <p className="mt-1 text-sm text-muted">
+                We sent a 6-digit code to{" "}
+                <span className="font-semibold text-ink">{sentTo}</span>.
+              </p>
+            </div>
+            <label className={labelClass}>
+              6-digit code
+              <input
+                type="text"
+                required
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                placeholder="123456"
+                className={`mt-1.5 text-center text-2xl tracking-[0.4em] ${inputClass}`}
+                autoFocus
+              />
+            </label>
+            {error && <p className="text-sm text-danger">{error}</p>}
+            <button type="submit" disabled={pending} className={submitClass}>
+              {pending && <Spinner />}
+              {pending ? "Verifying…" : "Verify & sign in"}
+              {!pending && (
+                <IviArrow
+                  dir="right"
+                  size={20}
+                  className="transition-transform duration-200 group-hover:translate-x-2"
+                />
+              )}
+            </button>
+            <div className="flex items-center justify-between text-sm">
+              <button
+                type="button"
+                onClick={() => {
+                  setOtpStep("email");
+                  resetMsgs();
+                }}
+                className="text-muted underline hover:text-brand-light"
+              >
+                Change email
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => requestCode()}
+                className="text-muted underline hover:text-brand-light disabled:opacity-60"
+              >
+                Resend code
+              </button>
+            </div>
+          </form>
+        )}
+
+        <p className="mt-6 border-t border-border pt-4 text-center text-sm text-muted">
+          Have a password?{" "}
           <button
             type="button"
-            onClick={handleMicrosoft}
-            className="group inline-flex min-h-[44px] w-full items-center justify-center gap-2.5 rounded-brand border border-border bg-white px-4 text-sm font-semibold text-ink transition-colors hover:border-brand hover:bg-surface-2"
+            onClick={() => {
+              setMode("password");
+              resetMsgs();
+            }}
+            className="font-semibold text-brand underline hover:text-brand-light"
           >
-            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 21 21">
-              <rect x="1" y="1" width="9" height="9" fill="#f25022" />
-              <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
-              <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
-              <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
-            </svg>
-            Continue with Microsoft
+            Sign in with password
           </button>
-          <p className="mt-2 text-center text-xs text-muted">
-            Use your ISB email to verify you&apos;re part of the community.
-          </p>
-          <div className="mt-5 flex items-center gap-3 text-xs text-muted">
-            <span className="h-px flex-1 bg-border" />
-            or with email
-            <span className="h-px flex-1 bg-border" />
-          </div>
-        </div>
-      )}
+        </p>
+      </div>
+    );
+  }
+
+  // ── Password mode ──────────────────────────────────────────────────────────
+  return (
+    <div className={cardClass}>
       <div className="mb-6 flex border-b border-border">
         {(
           [
@@ -150,7 +313,10 @@ export default function AuthCard({
           <button
             key={key}
             type="button"
-            onClick={() => switchTab(key)}
+            onClick={() => {
+              setTab(key);
+              resetMsgs();
+            }}
             aria-pressed={tab === key}
             className={`relative -mb-px flex-1 px-3 py-3 text-sm font-semibold transition-colors ${
               tab === key ? "text-brand" : "text-muted hover:text-brand"
@@ -187,7 +353,7 @@ export default function AuthCard({
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="you@isb.edu"
               className={`mt-1.5 ${inputClass}`}
             />
           </label>
@@ -209,9 +375,9 @@ export default function AuthCard({
             {pending && <Spinner />}
             {pending ? "Creating your account…" : "Create account"}
             {!pending && (
-              <IviArrow dir="right"
+              <IviArrow
+                dir="right"
                 size={20}
-                strokeWidth={2}
                 className="transition-transform duration-200 group-hover:translate-x-2"
               />
             )}
@@ -227,7 +393,7 @@ export default function AuthCard({
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="you@isb.edu"
               className={`mt-1.5 ${inputClass}`}
             />
           </label>
@@ -248,14 +414,30 @@ export default function AuthCard({
             {pending && <Spinner />}
             {pending ? "Signing in…" : "Sign in"}
             {!pending && (
-              <IviArrow dir="right"
+              <IviArrow
+                dir="right"
                 size={20}
-                strokeWidth={2}
                 className="transition-transform duration-200 group-hover:translate-x-2"
               />
             )}
           </button>
         </form>
+      )}
+
+      {otpEnabled && (
+        <p className="mt-6 border-t border-border pt-4 text-center text-sm text-muted">
+          <button
+            type="button"
+            onClick={() => {
+              setMode("otp");
+              setOtpStep("email");
+              resetMsgs();
+            }}
+            className="font-semibold text-brand underline hover:text-brand-light"
+          >
+            Sign in with an email code instead
+          </button>
+        </p>
       )}
     </div>
   );

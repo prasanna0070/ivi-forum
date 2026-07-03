@@ -6,11 +6,13 @@
  * Collections per SPEC.md: ivi_auth, ivi_users (+ private subcollection),
  * ivi_topics (+ replies subcollection), ivi_votes.
  */
-import { randomUUID } from 'node:crypto';
+import { randomUUID, randomInt } from 'node:crypto';
+import { hash, compare } from 'bcryptjs';
 import { Firestore } from '@google-cloud/firestore';
 import type {
   AuthRecord,
   MemberProfile,
+  OtpRecord,
   Reply,
   Topic,
   Vote,
@@ -39,6 +41,7 @@ export const db: Firestore =
 if (!globalForFirestore.__iviFirestore) globalForFirestore.__iviFirestore = db;
 
 const AUTH = 'ivi_auth';
+const OTP = 'ivi_otp';
 const USERS = 'ivi_users';
 const TOPICS = 'ivi_topics';
 const REPLIES = 'replies'; // subcollection of ivi_topics/{id}
@@ -108,16 +111,17 @@ export async function createAuthUser(input: {
 }
 
 /**
- * Find-or-create an account for a verified OAuth (Microsoft) sign-in, keyed by
- * email. If an `ivi_auth/{email}` already exists (password or prior OAuth), its
- * uid is reused — so signing in with Microsoft LINKS to the same profile as a
- * pre-existing password account with that email. Otherwise a fresh skeleton
- * profile (profileComplete=false) is minted. Never stores a password.
+ * Find-or-create an account for a VERIFIED email (OTP or OAuth), keyed by email.
+ * If an `ivi_auth/{email}` already exists (password or prior verified login), its
+ * uid is reused — so verified sign-in LINKS to the same profile as a pre-existing
+ * password account with that email. Otherwise a fresh skeleton profile
+ * (profileComplete=false) is minted. Never stores a password.
  * Returns the uid and whether the profile was newly created.
  */
-export async function ensureOAuthUser(input: {
+export async function ensureVerifiedAccount(input: {
   email: string;
   name: string;
+  provider: 'microsoft' | 'otp';
 }): Promise<{ uid: string; isNew: boolean }> {
   const emailLower = input.email.trim().toLowerCase();
   const authRef = db.collection(AUTH).doc(emailLower);
@@ -132,7 +136,7 @@ export async function ensureOAuthUser(input: {
     const authRecord: AuthRecord = {
       email: emailLower,
       uid,
-      provider: 'microsoft',
+      provider: input.provider,
       createdAt: now,
     };
     const skeleton: MemberProfile = {
@@ -164,6 +168,107 @@ export async function ensureOAuthUser(input: {
     tx.set(db.collection(USERS).doc(uid), skeleton);
     return { uid, isNew: true };
   });
+}
+
+// ---------------------------------------------------------------------------
+// One-time email codes (ivi_otp) — passwordless sign-in
+// ---------------------------------------------------------------------------
+
+const CODE_TTL_MS = 10 * 60 * 1000; // codes valid for 10 minutes
+const RESEND_COOLDOWN_MS = 60 * 1000; // 1 code per minute
+const SEND_WINDOW_MS = 60 * 60 * 1000; // rolling window for the send cap
+const MAX_SENDS_PER_WINDOW = 5; // max codes per email per hour
+const MAX_ATTEMPTS = 5; // wrong-code guesses before the code dies
+
+/**
+ * Mint a fresh 6-digit code for an email (rate-limited). Stores only the bcrypt
+ * hash; returns the plaintext once so the caller can email it. The membership
+ * gate is enforced by the caller before this is invoked.
+ */
+export async function startOtp(input: {
+  email: string;
+  name: string;
+}): Promise<{ ok: true; code: string } | { ok: false; retryAfterSec: number }> {
+  const email = input.email.trim().toLowerCase();
+  const ref = db.collection(OTP).doc(email);
+  const now = Date.now();
+  const snap = await ref.get();
+  const prev = snap.exists ? (snap.data() as OtpRecord) : null;
+
+  let sendCount = 0;
+  let windowStartedAt = now;
+  if (prev) {
+    if (now - prev.lastSentAt < RESEND_COOLDOWN_MS) {
+      return {
+        ok: false,
+        retryAfterSec: Math.ceil((RESEND_COOLDOWN_MS - (now - prev.lastSentAt)) / 1000),
+      };
+    }
+    if (now - prev.windowStartedAt < SEND_WINDOW_MS) {
+      windowStartedAt = prev.windowStartedAt;
+      sendCount = prev.sendCount;
+      if (sendCount >= MAX_SENDS_PER_WINDOW) {
+        return {
+          ok: false,
+          retryAfterSec: Math.ceil((SEND_WINDOW_MS - (now - prev.windowStartedAt)) / 1000),
+        };
+      }
+    }
+  }
+
+  const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+  const record: OtpRecord = {
+    email,
+    codeHash: await hash(code, 10),
+    name: input.name || prev?.name || '',
+    expiresAt: now + CODE_TTL_MS,
+    attempts: 0,
+    sendCount: sendCount + 1,
+    windowStartedAt,
+    lastSentAt: now,
+    createdAt: prev?.createdAt ?? now,
+  };
+  await ref.set(record);
+  return { ok: true, code };
+}
+
+/**
+ * Verify a submitted code. On success the code is consumed and the account is
+ * found-or-created (linking to any existing profile by email). Wrong guesses are
+ * counted; the code dies after MAX_ATTEMPTS or when it expires.
+ */
+export async function verifyOtp(input: {
+  email: string;
+  code: string;
+}): Promise<
+  | { ok: true; uid: string }
+  | { ok: false; error: 'invalid' | 'expired' | 'too_many' | 'not_found' }
+> {
+  const email = input.email.trim().toLowerCase();
+  const code = (input.code || '').trim();
+  const ref = db.collection(OTP).doc(email);
+  const snap = await ref.get();
+  if (!snap.exists) return { ok: false, error: 'not_found' };
+
+  const rec = snap.data() as OtpRecord;
+  const now = Date.now();
+  if (now > rec.expiresAt) {
+    await ref.delete();
+    return { ok: false, error: 'expired' };
+  }
+  if (rec.attempts >= MAX_ATTEMPTS) {
+    await ref.delete();
+    return { ok: false, error: 'too_many' };
+  }
+  const match = await compare(code, rec.codeHash);
+  if (!match) {
+    await ref.update({ attempts: rec.attempts + 1 });
+    return { ok: false, error: 'invalid' };
+  }
+
+  await ref.delete();
+  const { uid } = await ensureVerifiedAccount({ email, name: rec.name, provider: 'otp' });
+  return { ok: true, uid };
 }
 
 // ---------------------------------------------------------------------------

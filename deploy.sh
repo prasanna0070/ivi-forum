@@ -21,13 +21,15 @@ ENV_VARS="GCP_PROJECT=${PROJECT},AUTH_URL=${APP_URL},AUTH_TRUST_HOST=true"
 ENV_VARS="${ENV_VARS},APIFY_LINKEDIN_PROFILE_ACTOR=apimaestro~linkedin-profile-batch-scraper-no-cookies-required"
 ENV_VARS="${ENV_VARS},ALLOWED_EMAIL_DOMAINS=${ALLOWED_EMAIL_DOMAINS},ALLOWED_EMAILS=${ALLOWED_EMAILS}"
 
-# Microsoft (Entra ID) OAuth activates automatically once its secrets exist.
-if gcloud secrets describe ivi-forum-ms-client-id --project="$PROJECT" >/dev/null 2>&1; then
-  SECRETS="${SECRETS},AUTH_MICROSOFT_ENTRA_ID_ID=ivi-forum-ms-client-id:latest,AUTH_MICROSOFT_ENTRA_ID_SECRET=ivi-forum-ms-client-secret:latest"
-  ENV_VARS="${ENV_VARS},AUTH_MICROSOFT_ENTRA_ID_ISSUER=${MS_ISSUER:-https://login.microsoftonline.com/common/v2.0}"
-  echo "Microsoft OAuth: ENABLED (secrets found)"
+# Email OTP sign-in activates automatically once the Gmail sender is configured.
+# GMAIL_USER is the sending address; GMAIL_APP_PASSWORD is a Secret Manager secret.
+GMAIL_USER="${GMAIL_USER:-}"
+if [ -n "$GMAIL_USER" ] && gcloud secrets describe ivi-forum-gmail-app-password --project="$PROJECT" >/dev/null 2>&1; then
+  SECRETS="${SECRETS},GMAIL_APP_PASSWORD=ivi-forum-gmail-app-password:latest"
+  ENV_VARS="${ENV_VARS},GMAIL_USER=${GMAIL_USER}"
+  echo "Email OTP: ENABLED (Gmail sender ${GMAIL_USER})"
 else
-  echo "Microsoft OAuth: dormant (create ivi-forum-ms-client-id / -secret to enable)"
+  echo "Email OTP: dormant (set GMAIL_USER + create ivi-forum-gmail-app-password to enable)"
 fi
 
 gcloud run deploy "$SERVICE" \
