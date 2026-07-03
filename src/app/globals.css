@@ -99,16 +99,20 @@ body {
 }
 
 @layer utilities {
-  /* Safe-area padding for the sticky header + full-screen mobile menu on
-     notched devices (paired with viewportFit: "cover" in layout.tsx). */
+  /* Safe-area padding for notched devices (paired with viewportFit: "cover").
+     These ENFORCE A MINIMUM GUTTER rather than replacing it: because these
+     utilities land in the cascade alongside Tailwind's px-4/sm:px-6, a bare
+     `env(...)` would collapse the horizontal gutter to 0 in portrait (where the
+     inset is 0), pushing all content flush to the screen edge. `max()` keeps a
+     16px gutter and expands only when a real inset (landscape notch) exists. */
   .pt-safe {
     padding-top: env(safe-area-inset-top, 0px);
   }
   .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
   }
   .px-safe {
-    padding-left: env(safe-area-inset-left, 0px);
-    padding-right: env(safe-area-inset-right, 0px);
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
   }
 }
