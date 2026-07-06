@@ -49,30 +49,46 @@ export default async function Home() {
 
   return (
     <div className="-mx-4 -my-8 flex flex-col sm:-mx-6">
-      {/* ── hero (navy band) ── */}
-      <section className="bg-gradient-to-b from-brand to-brand-dark text-white">
-        <div className="px-safe mx-auto flex max-w-3xl flex-col items-center px-4 py-16 text-center sm:px-6 md:py-24">
+      {/* ── hero (cohort photo band) ── */}
+      <section className="relative isolate overflow-hidden text-white">
+        {/*
+          Real iVi cohort group photo as the backdrop. A navy scrim keeps the
+          headline crisp and folds the photo into the ISB brand — the faces stay
+          recognisable, but the band still reads as brand-indigo, not a snapshot.
+          object-position biases up toward the ivi banner + front rows.
+        */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/brand/cohort4.jpg"
+          alt=""
+          aria-hidden="true"
+          fetchPriority="high"
+          className="absolute inset-0 -z-10 h-full w-full object-cover object-[50%_28%]"
+        />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-brand-dark/85 via-brand/72 to-brand-dark/92" />
+
+        <div className="px-safe mx-auto flex max-w-3xl flex-col items-center px-4 py-20 text-center sm:px-6 md:py-28">
           <Image
             src="/brand/ivi-logo-white.png"
             alt="I-Venture @ ISB"
             width={1920}
             height={389}
             priority
-            className="h-10 w-auto sm:h-12"
+            className="h-10 w-auto drop-shadow-[0_2px_12px_rgba(9,15,45,0.5)] sm:h-12"
           />
-          <p className="mt-8 text-[13px] font-semibold uppercase tracking-[0.08em] text-white/70">
+          <p className="mt-8 text-[13px] font-semibold uppercase tracking-[0.08em] text-white/75">
             The I-Venture @ ISB community
           </p>
-          <h1 className="mt-3 font-serif text-[40px] font-normal leading-[1.1] tracking-[-0.01em] text-white md:text-display">
+          <h1 className="mt-3 font-serif text-[40px] font-normal leading-[1.1] tracking-[-0.01em] text-white [text-shadow:0_2px_28px_rgba(9,15,45,0.55)] md:text-display">
             Every cohort. One room.
           </h1>
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-white/85 md:text-lg">
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-white/90 [text-shadow:0_1px_16px_rgba(9,15,45,0.5)] md:text-lg">
             The member directory and forum for I-Venture @ ISB founders — built by
             the community, for the community.
           </p>
           <a
             href="#join"
-            className="group mt-8 inline-flex min-h-[44px] items-center justify-center gap-2 border border-white bg-white px-6 text-base font-semibold text-brand transition-colors hover:border-mint hover:bg-mint"
+            className="group mt-8 inline-flex min-h-[44px] items-center justify-center gap-2 border border-white bg-white px-6 text-base font-semibold text-brand shadow-[0_8px_30px_rgba(9,15,45,0.35)] transition-colors hover:border-mint hover:bg-mint"
           >
             Join the community
             <IviArrow dir="right"
@@ -81,6 +97,16 @@ export default async function Home() {
               className="transition-transform duration-200 group-hover:translate-x-2"
             />
           </a>
+        </div>
+
+        {/*
+          Honest little credit: today only Cohort 4's photo exists, so we label it
+          rather than imply it's every cohort. Swap/rotate as more photos arrive.
+        */}
+        <div className="px-safe pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-3 sm:justify-end sm:pb-4">
+          <span className="rounded-full bg-brand-dark/45 px-3 py-1 text-[11px] font-medium tracking-wide text-white/75 backdrop-blur-sm">
+            iVi Cohort&nbsp;4 · Orientation
+          </span>
         </div>
       </section>
 
