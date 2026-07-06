@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google-cloud/firestore": "^8.6.0",
+    "@google-cloud/storage": "^7.21.0",
     "bcryptjs": "^3.0.3",
     "lucide-react": "^1.23.0",
     "next": "16.2.10",

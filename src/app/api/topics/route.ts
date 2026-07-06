@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { createTopic, getMember } from '@/lib/firestore';
 import { requireUserApi } from '@/lib/session';
 import { sanitizeTags } from '@/components/forum/tags';
+import { sanitizeImagePaths } from '@/lib/images';
 
 export async function POST(request: Request) {
   const user = await requireUserApi();
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
     );
   }
   const tags = sanitizeTags(payload.tags);
+  const images = sanitizeImagePaths(payload.images, user.id);
 
   try {
     // Denormalized author fields come from the member profile, never the client.
@@ -50,6 +52,7 @@ export async function POST(request: Request) {
       title,
       body,
       tags,
+      images,
       authorUid: user.id,
       authorName: member.name,
       authorPhotoUrl: member.photoUrl,

@@ -16,8 +16,13 @@ APP_URL="${APP_URL:-https://ivi-forum-mzbkxhm73q-el.a.run.app}"
 ALLOWED_EMAIL_DOMAINS="${ALLOWED_EMAIL_DOMAINS:-isb.edu}"
 ALLOWED_EMAILS="${ALLOWED_EMAILS:-ayush.vasana@gmail.com}"
 
+# Private GCS bucket for forum image uploads (public access prevention enforced;
+# runtime SA has objectAdmin). Images are served back through /api/uploads.
+UPLOADS_BUCKET="${UPLOADS_BUCKET:-ivi-forum-uploads-891711670395}"
+
 SECRETS="AUTH_SECRET=ivi-forum-auth-secret:latest,APIFY_API_TOKEN=ivi-forum-apify-token:latest"
 ENV_VARS="GCP_PROJECT=${PROJECT},AUTH_URL=${APP_URL},AUTH_TRUST_HOST=true"
+ENV_VARS="${ENV_VARS},UPLOADS_BUCKET=${UPLOADS_BUCKET}"
 ENV_VARS="${ENV_VARS},APIFY_LINKEDIN_PROFILE_ACTOR=apimaestro~linkedin-profile-batch-scraper-no-cookies-required"
 ENV_VARS="${ENV_VARS},ALLOWED_EMAIL_DOMAINS=${ALLOWED_EMAIL_DOMAINS},ALLOWED_EMAILS=${ALLOWED_EMAILS}"
 

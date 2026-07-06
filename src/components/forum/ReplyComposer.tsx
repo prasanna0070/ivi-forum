@@ -6,18 +6,21 @@
  */
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
+import ImageUploader from './ImageUploader';
 import IviArrow from '@/components/IviArrow';
 
 export default function ReplyComposer({ topicId }: { topicId: string }) {
   const router = useRouter();
   const [body, setBody] = useState('');
+  const [images, setImages] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const canSubmit = body.trim().length > 0 || images.length > 0;
+
   async function submit(event: FormEvent) {
     event.preventDefault();
-    const trimmed = body.trim();
-    if (!trimmed || pending) return;
+    if (!canSubmit || pending) return;
 
     setPending(true);
     setError(null);
@@ -25,13 +28,14 @@ export default function ReplyComposer({ topicId }: { topicId: string }) {
       const res = await fetch(`/api/topics/${topicId}/replies`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: trimmed }),
+        body: JSON.stringify({ body: body.trim(), images }),
       });
       const data: { ok?: boolean; id?: string; error?: string } | null = await res
         .json()
         .catch(() => null);
       if (!res.ok || !data?.ok) throw new Error(data?.error ?? 'failed');
       setBody('');
+      setImages([]);
       router.refresh();
     } catch {
       setError("Couldn't post your reply — try again.");
@@ -58,6 +62,9 @@ export default function ReplyComposer({ topicId }: { topicId: string }) {
         placeholder="Share your thoughts…"
         className="mt-1.5 w-full resize-y rounded-input border border-border bg-white px-3 py-2.5 text-base text-ink placeholder:text-placeholder transition-colors focus:border-heading focus:outline-2 focus:-outline-offset-2 focus:outline-heading/30"
       />
+      <div className="mt-3">
+        <ImageUploader value={images} onChange={setImages} disabled={pending} />
+      </div>
       {error && (
         <p role="alert" className="mt-2 text-sm text-danger">
           {error}
@@ -66,7 +73,7 @@ export default function ReplyComposer({ topicId }: { topicId: string }) {
       <div className="mt-3 flex">
         <button
           type="submit"
-          disabled={pending || body.trim().length === 0}
+          disabled={pending || !canSubmit}
           className="group inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-brand bg-brand px-6 py-3 text-base font-semibold text-white transition-all hover:bg-brand-light active:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 sm:ml-auto sm:w-auto"
         >
           {pending ? 'Posting…' : 'Reply'}

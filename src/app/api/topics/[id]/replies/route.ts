@@ -10,6 +10,7 @@
 import { NextResponse } from 'next/server';
 import { createReply, getMember } from '@/lib/firestore';
 import { requireUserApi } from '@/lib/session';
+import { sanitizeImagePaths } from '@/lib/images';
 
 export async function POST(
   request: Request,
@@ -31,9 +32,17 @@ export async function POST(
   const payload = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
 
   const body = typeof payload.body === 'string' ? payload.body.trim() : '';
-  if (body.length < 1 || body.length > 5000) {
+  if (body.length > 5000) {
     return NextResponse.json(
-      { ok: false, error: 'body must be 1–5,000 characters' },
+      { ok: false, error: 'body must be at most 5,000 characters' },
+      { status: 400 },
+    );
+  }
+  const images = sanitizeImagePaths(payload.images, user.id);
+  // A reply must carry text OR at least one image.
+  if (body.length < 1 && images.length === 0) {
+    return NextResponse.json(
+      { ok: false, error: 'add a message or an image' },
       { status: 400 },
     );
   }
@@ -47,6 +56,7 @@ export async function POST(
 
     const reply = await createReply(topicId, {
       body,
+      images,
       authorUid: user.id,
       authorName: member.name,
       authorPhotoUrl: member.photoUrl,

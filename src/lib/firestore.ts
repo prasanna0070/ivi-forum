@@ -345,6 +345,7 @@ export async function createTopic(input: {
   title: string;
   body: string;
   tags: string[];
+  images?: string[];
   authorUid: string;
   authorName: string;
   authorPhotoUrl: string | null;
@@ -356,6 +357,7 @@ export async function createTopic(input: {
     title: input.title,
     body: input.body,
     tags: input.tags,
+    images: input.images ?? [],
     authorUid: input.authorUid,
     authorName: input.authorName,
     authorPhotoUrl: input.authorPhotoUrl,
@@ -390,7 +392,13 @@ export async function listReplies(topicId: string, sort: ReplySort = 'new'): Pro
  */
 export async function createReply(
   topicId: string,
-  input: { body: string; authorUid: string; authorName: string; authorPhotoUrl: string | null },
+  input: {
+    body: string;
+    images?: string[];
+    authorUid: string;
+    authorName: string;
+    authorPhotoUrl: string | null;
+  },
 ): Promise<Reply | null> {
   const topicRef = db.collection(TOPICS).doc(topicId);
   const replyRef = topicRef.collection(REPLIES).doc();
@@ -404,6 +412,7 @@ export async function createReply(
       id: replyRef.id,
       topicId,
       body: input.body,
+      images: input.images ?? [],
       authorUid: input.authorUid,
       authorName: input.authorName,
       authorPhotoUrl: input.authorPhotoUrl,

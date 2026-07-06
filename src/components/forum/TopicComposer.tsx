@@ -16,6 +16,8 @@ import {
 } from 'react';
 import { X } from 'lucide-react';
 import { MAX_TAGS, slugifyTag } from './tags';
+import ImageUploader from './ImageUploader';
+import { MAX_IMAGES } from '@/lib/images';
 import IviArrow from '@/components/IviArrow';
 
 const inputClass =
@@ -26,6 +28,7 @@ export default function TopicComposer() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [images, setImages] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [pending, setPending] = useState(false);
@@ -76,7 +79,7 @@ export default function TopicComposer() {
       const res = await fetch('/api/topics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: trimmedTitle, body: body.trim(), tags: finalTags }),
+        body: JSON.stringify({ title: trimmedTitle, body: body.trim(), tags: finalTags, images }),
       });
       const data: { ok?: boolean; id?: string; error?: string } | null = await res
         .json()
@@ -199,6 +202,13 @@ export default function TopicComposer() {
                   placeholder={tags.length >= MAX_TAGS ? 'Max 5 tags' : 'e.g. fundraising'}
                   className="min-w-24 flex-1 border-none bg-transparent px-1 py-0.5 text-base text-ink placeholder:text-placeholder focus:outline-none"
                 />
+              </div>
+
+              <div className="mt-4 block text-sm font-semibold text-ink">
+                Images <span className="font-normal text-muted">— up to {MAX_IMAGES}, 5 MB each</span>
+              </div>
+              <div className="mt-1.5">
+                <ImageUploader value={images} onChange={setImages} disabled={pending} />
               </div>
 
               {error && (

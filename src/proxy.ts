@@ -46,5 +46,6 @@ export const config = {
     "/api/profile/:path*",
     "/api/topics/:path*",
     "/api/votes/:path*",
+    "/api/uploads/:path*",
   ],
 };

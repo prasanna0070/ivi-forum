@@ -5,6 +5,7 @@
 import Link from 'next/link';
 import Avatar from '@/components/Avatar';
 import ReplyComposer from '@/components/forum/ReplyComposer';
+import PostImages from '@/components/forum/PostImages';
 import VoteWidget from '@/components/forum/VoteWidget';
 import { getTopic, getVotesForUser, listReplies, type ReplySort } from '@/lib/firestore';
 import { timeAgo } from '@/lib/format';
@@ -128,6 +129,7 @@ export default async function TopicPage({
                 {topic.body}
               </p>
             )}
+            <PostImages images={topic.images} />
           </div>
         </div>
       </div>
@@ -176,9 +178,12 @@ export default async function TopicPage({
                   myVote={myVotes[reply.id] ?? null}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="whitespace-pre-line text-base leading-[1.6] text-ink">
-                    {reply.body}
-                  </p>
+                  {reply.body && (
+                    <p className="whitespace-pre-line text-base leading-[1.6] text-ink">
+                      {reply.body}
+                    </p>
+                  )}
+                  <PostImages images={reply.images} />
                   <div className="mt-3 flex min-w-0 items-center gap-x-1.5 text-xs text-muted">
                     <Avatar
                       src={reply.authorPhotoUrl}

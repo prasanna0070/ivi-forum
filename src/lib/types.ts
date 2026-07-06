@@ -93,6 +93,7 @@ export interface Topic {
   title: string; // 1..200 chars
   body: string; // 0..10000 chars, plain text w/ newlines
   tags: string[]; // 0..5, lowercase
+  images: string[]; // 0..4 stored object paths (posts/<uid>/<uuid>.<ext>)
   authorUid: string;
   authorName: string; // denormalized
   authorPhotoUrl: string | null;
@@ -109,6 +110,7 @@ export interface Reply {
   id: string;
   topicId: string;
   body: string; // 1..5000 chars
+  images: string[]; // 0..4 stored object paths (posts/<uid>/<uuid>.<ext>)
   authorUid: string;
   authorName: string;
   authorPhotoUrl: string | null;
