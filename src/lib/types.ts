@@ -75,6 +75,8 @@ export interface MemberProfile {
   currentTitle: string | null;
   currentCompany: string | null;
   skills: string[];
+  /** Chosen tag slugs used to notify the member about new posts (DEFAULT_TAG_SLUGS ∪ custom). */
+  interestTags: string[];
   experience: ExperienceItem[];
   education: EducationItem[];
   followerCount: number | null;
@@ -94,6 +96,7 @@ export interface Topic {
   body: string; // 0..10000 chars, plain text w/ newlines
   tags: string[]; // 0..5, lowercase
   images: string[]; // 0..4 stored object paths (posts/<uid>/<uuid>.<ext>)
+  mentionUids: string[]; // uids of members @-mentioned in the title/body
   authorUid: string;
   authorName: string; // denormalized
   authorPhotoUrl: string | null;
@@ -111,6 +114,9 @@ export interface Reply {
   topicId: string;
   body: string; // 1..5000 chars
   images: string[]; // 0..4 stored object paths (posts/<uid>/<uuid>.<ext>)
+  parentId: string | null; // parent reply id (threading); null = top-level
+  depth: number; // 0 for top-level, +1 per nesting level
+  mentionUids: string[]; // uids of members @-mentioned in the body
   authorUid: string;
   authorName: string;
   authorPhotoUrl: string | null;

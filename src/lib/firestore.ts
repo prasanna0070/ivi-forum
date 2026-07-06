@@ -93,6 +93,7 @@ export async function createAuthUser(input: {
       currentTitle: null,
       currentCompany: null,
       skills: [],
+      interestTags: [],
       experience: [],
       education: [],
       followerCount: null,
@@ -155,6 +156,7 @@ export async function ensureVerifiedAccount(input: {
       currentTitle: null,
       currentCompany: null,
       skills: [],
+      interestTags: [],
       experience: [],
       education: [],
       followerCount: null,
@@ -346,6 +348,7 @@ export async function createTopic(input: {
   body: string;
   tags: string[];
   images?: string[];
+  mentionUids?: string[];
   authorUid: string;
   authorName: string;
   authorPhotoUrl: string | null;
@@ -358,6 +361,7 @@ export async function createTopic(input: {
     body: input.body,
     tags: input.tags,
     images: input.images ?? [],
+    mentionUids: input.mentionUids ?? [],
     authorUid: input.authorUid,
     authorName: input.authorName,
     authorPhotoUrl: input.authorPhotoUrl,
@@ -395,6 +399,9 @@ export async function createReply(
   input: {
     body: string;
     images?: string[];
+    parentId?: string | null;
+    depth?: number;
+    mentionUids?: string[];
     authorUid: string;
     authorName: string;
     authorPhotoUrl: string | null;
@@ -413,6 +420,9 @@ export async function createReply(
       topicId,
       body: input.body,
       images: input.images ?? [],
+      parentId: input.parentId ?? null,
+      depth: input.depth ?? 0,
+      mentionUids: input.mentionUids ?? [],
       authorUid: input.authorUid,
       authorName: input.authorName,
       authorPhotoUrl: input.authorPhotoUrl,
