@@ -8,9 +8,10 @@
  * same Firestore transaction (see @/lib/firestore).
  */
 import { NextResponse } from 'next/server';
-import { createReply, getMember } from '@/lib/firestore';
+import { createReply, getMember, getReply } from '@/lib/firestore';
 import { requireUserApi } from '@/lib/session';
 import { sanitizeImagePaths } from '@/lib/images';
+import { REPLY_MAX_DEPTH } from '@/lib/forum';
 
 export async function POST(
   request: Request,
@@ -47,6 +48,10 @@ export async function POST(
     );
   }
 
+  // Threading: an optional parentId nests this reply. Depth is computed from the
+  // parent server-side (never trusted from the client) and clamped.
+  const parentIdRaw = typeof payload.parentId === 'string' ? payload.parentId : null;
+
   try {
     // Denormalized author fields come from the member profile, never the client.
     const member = await getMember(user.id);
@@ -54,9 +59,22 @@ export async function POST(
       return NextResponse.json({ ok: false, error: 'profile-not-found' }, { status: 403 });
     }
 
+    let parentId: string | null = null;
+    let depth = 0;
+    if (parentIdRaw) {
+      const parent = await getReply(topicId, parentIdRaw);
+      if (!parent || parent.topicId !== topicId) {
+        return NextResponse.json({ ok: false, error: 'parent reply not found' }, { status: 400 });
+      }
+      parentId = parent.id;
+      depth = Math.min((parent.depth ?? 0) + 1, REPLY_MAX_DEPTH);
+    }
+
     const reply = await createReply(topicId, {
       body,
       images,
+      parentId,
+      depth,
       authorUid: user.id,
       authorName: member.name,
       authorPhotoUrl: member.photoUrl,

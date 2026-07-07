@@ -380,6 +380,12 @@ export async function createTopic(input: {
 // Replies (ivi_topics/{id}/replies)
 // ---------------------------------------------------------------------------
 
+/** Fetch a single reply by id (used to resolve a threaded reply's parent). */
+export async function getReply(topicId: string, replyId: string): Promise<Reply | null> {
+  const snap = await db.collection(TOPICS).doc(topicId).collection(REPLIES).doc(replyId).get();
+  return snap.exists ? ({ ...(snap.data() as Reply), id: snap.id }) : null;
+}
+
 /** Replies for a topic. */
 export async function listReplies(topicId: string, sort: ReplySort = 'new'): Promise<Reply[]> {
   const col = db.collection(TOPICS).doc(topicId).collection(REPLIES);

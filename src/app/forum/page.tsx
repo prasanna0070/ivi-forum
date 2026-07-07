@@ -9,6 +9,7 @@ import Avatar from '@/components/Avatar';
 import TopicComposer from '@/components/forum/TopicComposer';
 import VoteWidget from '@/components/forum/VoteWidget';
 import { getVotesForUser, listTopics, type TopicSort } from '@/lib/firestore';
+import { tagLabel } from '@/components/forum/tags';
 import { timeAgo } from '@/lib/format';
 import { requireMember } from '@/lib/session';
 
@@ -106,7 +107,7 @@ export default async function ForumPage({
                         key={tag}
                         className="inline-flex items-center rounded-input border border-border bg-white px-2 py-0.5 text-xs font-medium text-brand"
                       >
-                        {tag}
+                        {tagLabel(tag)}
                       </span>
                     ))}
                   </div>

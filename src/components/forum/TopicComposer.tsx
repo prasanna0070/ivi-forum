@@ -15,8 +15,9 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 import { X } from 'lucide-react';
-import { MAX_TAGS, slugifyTag } from './tags';
+import { DEFAULT_TAG_SLUGS, MAX_TAGS, slugifyTag } from './tags';
 import ImageUploader from './ImageUploader';
+import TagChips from './TagChips';
 import { MAX_IMAGES } from '@/lib/images';
 import IviArrow from '@/components/IviArrow';
 
@@ -51,6 +52,16 @@ export default function TopicComposer() {
     if (!slug) return;
     setTags((prev) =>
       prev.includes(slug) || prev.length >= MAX_TAGS ? prev : [...prev, slug],
+    );
+  }
+
+  function toggleTag(slug: string) {
+    setTags((prev) =>
+      prev.includes(slug)
+        ? prev.filter((t) => t !== slug)
+        : prev.length >= MAX_TAGS
+          ? prev
+          : [...prev, slug],
     );
   }
 
@@ -172,11 +183,18 @@ export default function TopicComposer() {
                 className={`mt-1.5 resize-y ${inputClass}`}
               />
 
-              <label htmlFor="topic-tags" className="mt-4 block text-sm font-semibold text-ink">
-                Tags <span className="font-normal text-muted">— up to {MAX_TAGS}, comma or Enter</span>
+              <label className="mt-4 block text-sm font-semibold text-ink">
+                Tags <span className="font-normal text-muted">— up to {MAX_TAGS}; tap to add</span>
+              </label>
+              <div className="mt-2">
+                <TagChips selected={tags} onToggle={toggleTag} disabled={pending} />
+              </div>
+
+              <label htmlFor="topic-tags" className="mt-3 block text-xs font-medium text-muted">
+                Or add your own <span className="font-normal">— comma or Enter</span>
               </label>
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5 rounded-input border border-border bg-white px-2 py-1.5 transition-colors focus-within:border-heading focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-heading/30">
-                {tags.map((tag) => (
+                {tags.filter((t) => !DEFAULT_TAG_SLUGS.has(t)).map((tag) => (
                   <span
                     key={tag}
                     className="inline-flex items-center gap-1 rounded-input border border-border bg-surface px-2 py-0.5 text-xs font-medium text-brand"
@@ -199,7 +217,7 @@ export default function TopicComposer() {
                   onKeyDown={onTagKeyDown}
                   onBlur={() => addTag(tagInput)}
                   disabled={tags.length >= MAX_TAGS}
-                  placeholder={tags.length >= MAX_TAGS ? 'Max 5 tags' : 'e.g. fundraising'}
+                  placeholder={tags.length >= MAX_TAGS ? `Max ${MAX_TAGS} tags` : 'e.g. fundraising'}
                   className="min-w-24 flex-1 border-none bg-transparent px-1 py-0.5 text-base text-ink placeholder:text-placeholder focus:outline-none"
                 />
               </div>

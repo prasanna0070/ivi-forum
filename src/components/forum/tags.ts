@@ -3,7 +3,7 @@
  * and the POST /api/topics route (server). Owned by the forum agent.
  */
 
-export const MAX_TAGS = 5;
+export const MAX_TAGS = 8;
 export const MAX_TAG_LENGTH = 30;
 
 /**

@@ -5,9 +5,12 @@
 import Link from 'next/link';
 import Avatar from '@/components/Avatar';
 import ReplyComposer from '@/components/forum/ReplyComposer';
+import ReplyTree from '@/components/forum/ReplyTree';
 import PostImages from '@/components/forum/PostImages';
 import VoteWidget from '@/components/forum/VoteWidget';
 import { getTopic, getVotesForUser, listReplies, type ReplySort } from '@/lib/firestore';
+import { buildReplyTree } from '@/lib/forum';
+import { tagLabel } from '@/components/forum/tags';
 import { timeAgo } from '@/lib/format';
 import { requireMember } from '@/lib/session';
 import IviArrow from '@/components/IviArrow';
@@ -74,6 +77,7 @@ export default async function TopicPage({
   }
 
   const replies = await listReplies(topicId, sort);
+  const roots = buildReplyTree(replies, sort);
   const myVotes = await getVotesForUser(user.id, [topicId, ...replies.map((r) => r.id)]);
 
   return (
@@ -101,7 +105,7 @@ export default async function TopicPage({
                     key={tag}
                     className="inline-flex items-center rounded-input border border-border bg-white px-2 py-0.5 text-xs font-medium text-brand"
                   >
-                    {tag}
+                    {tagLabel(tag)}
                   </span>
                 ))}
               </div>
@@ -162,54 +166,15 @@ export default async function TopicPage({
         </nav>
       </div>
 
-      <div className="mt-4 flex flex-col gap-3">
-        {replies.length === 0 ? (
+      <div className="mt-4">
+        {roots.length === 0 ? (
           <p className="text-sm text-muted">No replies yet — be the first to weigh in.</p>
         ) : (
-          replies.map((reply) => (
-            <div key={reply.id} className="rounded-card border border-border bg-white p-4">
-              <div className="flex gap-3">
-                <VoteWidget
-                  compact
-                  targetType="reply"
-                  targetId={reply.id}
-                  topicId={topicId}
-                  score={reply.score}
-                  myVote={myVotes[reply.id] ?? null}
-                />
-                <div className="min-w-0 flex-1">
-                  {reply.body && (
-                    <p className="whitespace-pre-line text-base leading-[1.6] text-ink">
-                      {reply.body}
-                    </p>
-                  )}
-                  <PostImages images={reply.images} />
-                  <div className="mt-3 flex min-w-0 items-center gap-x-1.5 text-xs text-muted">
-                    <Avatar
-                      src={reply.authorPhotoUrl}
-                      name={reply.authorName}
-                      size={20}
-                      className="shrink-0"
-                    />
-                    <Link
-                      href={`/profile/${reply.authorUid}`}
-                      className="min-w-0 truncate font-medium text-ink transition-colors hover:text-brand-light"
-                    >
-                      {reply.authorName}
-                    </Link>
-                    <span aria-hidden="true" className="shrink-0">
-                      ·
-                    </span>
-                    <span className="shrink-0 whitespace-nowrap">{timeAgo(reply.createdAt)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))
+          <ReplyTree roots={roots} topicId={topicId} myVotes={myVotes} />
         )}
       </div>
 
-      {/* Composer */}
+      {/* Top-level composer */}
       <div className="mt-8">
         <ReplyComposer topicId={topicId} />
       </div>
