@@ -4,7 +4,7 @@
  * Request body: the editable subset of MemberProfile —
  *   { name, photoUrl, linkedinUrl, headline, about, location, cohort,
  *     startupName, startupDescription, startupWebsite, currentTitle,
- *     currentCompany, skills, experience, education }
+ *     currentCompany, skills, interestTags, experience, education }
  * Everything is validated defensively (types, lengths, list caps) and unknown
  * keys are stripped — the client is never trusted.
  *
@@ -15,6 +15,7 @@
 import { NextResponse } from 'next/server';
 import { requireUserApi } from '@/lib/session';
 import { upsertMember } from '@/lib/firestore';
+import { sanitizeInterestTags } from '@/components/forum/tags';
 import type { Cohort, EducationItem, ExperienceItem, MemberProfile } from '@/lib/types';
 
 // ---------------------------------------------------------------------------
@@ -144,6 +145,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     currentTitle: cleanString(raw.currentTitle, MAX.title),
     currentCompany: cleanString(raw.currentCompany, MAX.company),
     skills: cleanSkills(raw.skills),
+    interestTags: sanitizeInterestTags(raw.interestTags),
     experience: cleanExperience(raw.experience),
     education: cleanEducation(raw.education),
   };

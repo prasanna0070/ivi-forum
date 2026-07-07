@@ -10,6 +10,7 @@ import { AlertCircle, Plus, X } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import IviArrow from '@/components/IviArrow';
 import { ChipInput } from '@/components/onboarding/ChipInput';
+import { InterestTagPicker } from '@/components/onboarding/InterestTagPicker';
 import {
   EMPTY_EDUCATION_ROW,
   EMPTY_EXPERIENCE_ROW,
@@ -299,6 +300,17 @@ export function ProfileForm({ initialValues, editMode }: ProfileFormProps) {
       {/* ------------------------------------------------ Skills */}
       <SectionCard title="Skills" hint="Type a skill and press Enter — up to 30.">
         <ChipInput value={values.skills} onChange={(skills) => set('skills', skills)} />
+      </SectionCard>
+
+      {/* ------------------------------------------------ Interests */}
+      <SectionCard
+        title="Interests"
+        hint="Pick the topics you care about — we'll email you when someone posts about them."
+      >
+        <InterestTagPicker
+          value={values.interestTags}
+          onChange={(interestTags) => set('interestTags', interestTags)}
+        />
       </SectionCard>
 
       {/* ------------------------------------------------ Experience */}

@@ -6,6 +6,7 @@ import Avatar from '@/components/Avatar';
 import LinkedInIcon from '@/components/directory/LinkedInIcon';
 import { getMember } from '@/lib/firestore';
 import { requireMember } from '@/lib/session';
+import { tagLabel } from '@/components/forum/tags';
 import type { MemberProfile } from '@/lib/types';
 import IviArrow from '@/components/IviArrow';
 
@@ -82,7 +83,9 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
   const hasExperience = member.experience.length > 0;
   const hasEducation = member.education.length > 0;
   const hasSkills = member.skills.length > 0;
-  const isThin = !hasAbout && !hasStartup && !hasExperience && !hasEducation && !hasSkills;
+  const hasInterests = member.interestTags.length > 0;
+  const isThin =
+    !hasAbout && !hasStartup && !hasExperience && !hasEducation && !hasSkills && !hasInterests;
 
   const counts = [
     member.followerCount != null && `${member.followerCount.toLocaleString()} followers`,
@@ -262,6 +265,21 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
                     className="rounded-input border border-border bg-white px-3 py-1 text-sm text-brand"
                   >
                     {skill}
+                  </span>
+                ))}
+              </div>
+            </SectionCard>
+          )}
+
+          {hasInterests && (
+            <SectionCard title="Interests">
+              <div className="flex flex-wrap gap-2">
+                {member.interestTags.map((slug) => (
+                  <span
+                    key={slug}
+                    className="rounded-input border border-border bg-white px-3 py-1 text-sm text-brand"
+                  >
+                    {tagLabel(slug)}
                   </span>
                 ))}
               </div>

@@ -38,6 +38,8 @@ export interface ProfileFormValues {
   currentTitle: string;
   currentCompany: string;
   skills: string[];
+  /** Interest-tag slugs the member follows (defaults + custom). */
+  interestTags: string[];
   experience: ExperienceFormRow[];
   education: EducationFormRow[];
 }
@@ -80,6 +82,9 @@ export function toFormValues(
     currentTitle: s.currentTitle ?? '',
     currentCompany: s.currentCompany ?? '',
     skills: (s.skills ?? []).filter((skill) => typeof skill === 'string' && skill.trim() !== ''),
+    interestTags: (s.interestTags ?? []).filter(
+      (tag) => typeof tag === 'string' && tag.trim() !== '',
+    ),
     experience: (s.experience ?? []).map((e) => ({
       title: e.title ?? '',
       company: e.company ?? '',
@@ -113,6 +118,8 @@ export function toProfilePayload(values: ProfileFormValues): Record<string, unkn
     currentTitle: nn(values.currentTitle),
     currentCompany: nn(values.currentCompany),
     skills: values.skills.map((s) => s.trim()).filter(Boolean),
+    // Slugs are already normalized by the picker; the API re-sanitizes them.
+    interestTags: values.interestTags,
     experience: values.experience
       .filter((row) => row.title.trim() || row.company.trim())
       .map((row) => ({
