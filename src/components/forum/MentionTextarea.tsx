@@ -56,6 +56,7 @@ export default function MentionTextarea({
   placeholder,
   rows = 4,
   maxLength,
+  autoFocus = false,
   className = '',
 }: {
   value: string;
@@ -65,6 +66,7 @@ export default function MentionTextarea({
   placeholder?: string;
   rows?: number;
   maxLength?: number;
+  autoFocus?: boolean;
   className?: string;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -193,6 +195,7 @@ export default function MentionTextarea({
         }}
         rows={rows}
         maxLength={maxLength}
+        autoFocus={autoFocus}
         placeholder={placeholder}
         role="combobox"
         aria-expanded={open}

@@ -13,6 +13,7 @@
 import { useRouter } from 'next/navigation';
 import { useId, useState, type FormEvent } from 'react';
 import ImageUploader from './ImageUploader';
+import MentionTextarea from './MentionTextarea';
 import IviArrow from '@/components/IviArrow';
 
 export default function ReplyComposer({
@@ -29,6 +30,7 @@ export default function ReplyComposer({
   const nested = Boolean(parentId);
   const [body, setBody] = useState('');
   const [images, setImages] = useState<string[]>([]);
+  const [mentionUids, setMentionUids] = useState<string[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +46,7 @@ export default function ReplyComposer({
       const res = await fetch(`/api/topics/${topicId}/replies`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: body.trim(), images, parentId }),
+        body: JSON.stringify({ body: body.trim(), images, parentId, mentionUids }),
       });
       const data: { ok?: boolean; id?: string; error?: string } | null = await res
         .json()
@@ -52,6 +54,7 @@ export default function ReplyComposer({
       if (!res.ok || !data?.ok) throw new Error(data?.error ?? 'failed');
       setBody('');
       setImages([]);
+      setMentionUids([]);
       router.refresh();
       onDone?.();
     } catch {
@@ -71,15 +74,16 @@ export default function ReplyComposer({
         {nested ? 'Your reply' : 'Your reply'}{' '}
         <span className="font-normal text-muted">— plain text, be kind</span>
       </label>
-      <textarea
+      <MentionTextarea
         id={fieldId}
         value={body}
-        onChange={(event) => setBody(event.target.value)}
+        onChange={setBody}
+        onMentionsChange={setMentionUids}
         maxLength={5000}
         rows={nested ? 3 : 4}
         autoFocus={nested}
-        placeholder="Share your thoughts…"
-        className="mt-1.5 w-full resize-y rounded-input border border-border bg-white px-3 py-2.5 text-base text-ink placeholder:text-placeholder transition-colors focus:border-heading focus:outline-2 focus:-outline-offset-2 focus:outline-heading/30"
+        placeholder="Share your thoughts… use @ to mention a member"
+        className="mt-1.5 resize-y"
       />
       <div className="mt-3">
         <ImageUploader value={images} onChange={setImages} disabled={pending} />

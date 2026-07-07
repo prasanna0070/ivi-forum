@@ -18,6 +18,7 @@ import { X } from 'lucide-react';
 import { DEFAULT_TAG_SLUGS, MAX_TAGS, slugifyTag } from './tags';
 import ImageUploader from './ImageUploader';
 import TagChips from './TagChips';
+import MentionTextarea from './MentionTextarea';
 import { MAX_IMAGES } from '@/lib/images';
 import IviArrow from '@/components/IviArrow';
 
@@ -29,6 +30,7 @@ export default function TopicComposer() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [mentionUids, setMentionUids] = useState<string[]>([]);
   const [images, setImages] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -90,7 +92,7 @@ export default function TopicComposer() {
       const res = await fetch('/api/topics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: trimmedTitle, body: body.trim(), tags: finalTags, images }),
+        body: JSON.stringify({ title: trimmedTitle, body: body.trim(), tags: finalTags, images, mentionUids }),
       });
       const data: { ok?: boolean; id?: string; error?: string } | null = await res
         .json()
@@ -171,16 +173,17 @@ export default function TopicComposer() {
               />
 
               <label htmlFor="topic-body" className="mt-4 block text-sm font-semibold text-ink">
-                Body <span className="font-normal text-muted">— plain text, be kind</span>
+                Body <span className="font-normal text-muted">— plain text; use @ to mention</span>
               </label>
-              <textarea
+              <MentionTextarea
                 id="topic-body"
                 value={body}
-                onChange={(event) => setBody(event.target.value)}
+                onChange={setBody}
+                onMentionsChange={setMentionUids}
                 maxLength={10000}
                 rows={6}
-                placeholder="Add context, links, questions…"
-                className={`mt-1.5 resize-y ${inputClass}`}
+                placeholder="Add context, links, questions… @mention a member"
+                className="mt-1.5 resize-y"
               />
 
               <label className="mt-4 block text-sm font-semibold text-ink">

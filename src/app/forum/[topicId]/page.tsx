@@ -7,6 +7,7 @@ import Avatar from '@/components/Avatar';
 import ReplyComposer from '@/components/forum/ReplyComposer';
 import ReplyTree from '@/components/forum/ReplyTree';
 import PostImages from '@/components/forum/PostImages';
+import MentionedBody from '@/components/forum/MentionedBody';
 import VoteWidget from '@/components/forum/VoteWidget';
 import { getTopic, getVotesForUser, listReplies, type ReplySort } from '@/lib/firestore';
 import { buildReplyTree } from '@/lib/forum';
@@ -129,9 +130,7 @@ export default async function TopicPage({
               <span className="shrink-0 whitespace-nowrap">{timeAgo(topic.createdAt)}</span>
             </div>
             {topic.body && (
-              <p className="mt-4 whitespace-pre-line text-base leading-[1.6] text-ink">
-                {topic.body}
-              </p>
+              <MentionedBody body={topic.body} className="mt-4 text-base leading-[1.6] text-ink" />
             )}
             <PostImages images={topic.images} />
           </div>

@@ -12,6 +12,7 @@ import { Reply as ReplyIcon } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import VoteWidget from './VoteWidget';
 import PostImages from './PostImages';
+import MentionedBody from './MentionedBody';
 import ReplyComposer from './ReplyComposer';
 import { REPLY_MAX_DEPTH, type ReplyNode } from '@/lib/forum';
 import { timeAgo } from '@/lib/format';
@@ -42,7 +43,7 @@ function Node({
           />
           <div className="min-w-0 flex-1">
             {node.body && (
-              <p className="whitespace-pre-line text-base leading-[1.6] text-ink">{node.body}</p>
+              <MentionedBody body={node.body} className="text-base leading-[1.6] text-ink" />
             )}
             <PostImages images={node.images} />
             <div className="mt-3 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted">
