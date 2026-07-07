@@ -11,6 +11,7 @@ import { NextResponse } from 'next/server';
 import { createReply, getMember, getReply } from '@/lib/firestore';
 import { requireUserApi } from '@/lib/session';
 import { sanitizeImagePaths } from '@/lib/images';
+import { extractMentionUids, sanitizeMentionUids, MAX_MENTIONS } from '@/components/forum/mentions';
 import { REPLY_MAX_DEPTH } from '@/lib/forum';
 
 export async function POST(
@@ -52,6 +53,17 @@ export async function POST(
   // parent server-side (never trusted from the client) and clamped.
   const parentIdRaw = typeof payload.parentId === 'string' ? payload.parentId : null;
 
+  // Mentions: the saved body is the source of truth (anti-injection); a client
+  // mentionUids claim, if present, narrows the body-derived set to the
+  // intersection, else every uid found in the body is stored.
+  const bodyMentionUids = extractMentionUids(body);
+  const claimedMentionUids = new Set(sanitizeMentionUids(payload.mentionUids));
+  const mentionUids = (
+    claimedMentionUids.size > 0
+      ? bodyMentionUids.filter((uid) => claimedMentionUids.has(uid))
+      : bodyMentionUids
+  ).slice(0, MAX_MENTIONS);
+
   try {
     // Denormalized author fields come from the member profile, never the client.
     const member = await getMember(user.id);
@@ -75,6 +87,7 @@ export async function POST(
       images,
       parentId,
       depth,
+      mentionUids,
       authorUid: user.id,
       authorName: member.name,
       authorPhotoUrl: member.photoUrl,

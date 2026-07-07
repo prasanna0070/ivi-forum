@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { createTopic, getMember } from '@/lib/firestore';
 import { requireUserApi } from '@/lib/session';
 import { sanitizeTags } from '@/components/forum/tags';
+import { extractMentionUids, sanitizeMentionUids, MAX_MENTIONS } from '@/components/forum/mentions';
 import { sanitizeImagePaths } from '@/lib/images';
 
 export async function POST(request: Request) {
@@ -41,6 +42,18 @@ export async function POST(request: Request) {
   const tags = sanitizeTags(payload.tags);
   const images = sanitizeImagePaths(payload.images, user.id);
 
+  // Mentions: the body is the source of truth (anti-injection — we never store a
+  // uid that isn't an @[Name](uid) token in the saved text). If the client sent a
+  // mentionUids claim, we narrow to the intersection; otherwise we use every uid
+  // found in the body, so mentions still persist even without the client array.
+  const bodyMentionUids = extractMentionUids(body);
+  const claimedMentionUids = new Set(sanitizeMentionUids(payload.mentionUids));
+  const mentionUids = (
+    claimedMentionUids.size > 0
+      ? bodyMentionUids.filter((uid) => claimedMentionUids.has(uid))
+      : bodyMentionUids
+  ).slice(0, MAX_MENTIONS);
+
   try {
     // Denormalized author fields come from the member profile, never the client.
     const member = await getMember(user.id);
@@ -53,6 +66,7 @@ export async function POST(request: Request) {
       body,
       tags,
       images,
+      mentionUids,
       authorUid: user.id,
       authorName: member.name,
       authorPhotoUrl: member.photoUrl,

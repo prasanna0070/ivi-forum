@@ -44,6 +44,7 @@ export const config = {
     "/profile/:path*",
     "/api/scrape/:path*",
     "/api/profile/:path*",
+    "/api/members/:path*",
     "/api/topics/:path*",
     "/api/votes/:path*",
     "/api/uploads/:path*",
