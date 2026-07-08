@@ -80,10 +80,16 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
   const hasStartup = Boolean(
     member.startupName || member.startupDescription || member.startupWebsite,
   );
-  const hasExperience = member.experience.length > 0;
-  const hasEducation = member.education.length > 0;
-  const hasSkills = member.skills.length > 0;
-  const hasInterests = member.interestTags.length > 0;
+  // Older member docs predate some array fields (getMember backfills them, but
+  // guard here too so a raw doc can never 500 the whole page).
+  const experience = member.experience ?? [];
+  const education = member.education ?? [];
+  const skills = member.skills ?? [];
+  const interestTags = member.interestTags ?? [];
+  const hasExperience = experience.length > 0;
+  const hasEducation = education.length > 0;
+  const hasSkills = skills.length > 0;
+  const hasInterests = interestTags.length > 0;
   const isThin =
     !hasAbout && !hasStartup && !hasExperience && !hasEducation && !hasSkills && !hasInterests;
 
@@ -214,7 +220,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
           {hasExperience && (
             <SectionCard title="Experience">
               <ol className="relative space-y-6 border-l border-border pl-6">
-                {member.experience.map((item, i) => (
+                {experience.map((item, i) => (
                   <li key={`${item.title}-${item.company}-${i}`} className="relative">
                     <span
                       aria-hidden="true"
@@ -241,7 +247,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
           {hasEducation && (
             <SectionCard title="Education">
               <ul className="divide-y divide-border">
-                {member.education.map((item, i) => (
+                {education.map((item, i) => (
                   <li key={`${item.school}-${i}`} className="py-4 first:pt-0 last:pb-0">
                     <p className="font-semibold text-ink">{item.school}</p>
                     {(item.degree || item.fieldOfStudy) && (
@@ -259,7 +265,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
           {hasSkills && (
             <SectionCard title="Skills">
               <div className="flex flex-wrap gap-2">
-                {member.skills.map((skill) => (
+                {skills.map((skill) => (
                   <span
                     key={skill}
                     className="rounded-input border border-border bg-white px-3 py-1 text-sm text-brand"
@@ -274,7 +280,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
           {hasInterests && (
             <SectionCard title="Interests">
               <div className="flex flex-wrap gap-2">
-                {member.interestTags.map((slug) => (
+                {interestTags.map((slug) => (
                   <span
                     key={slug}
                     className="rounded-input border border-border bg-white px-3 py-1 text-sm text-brand"

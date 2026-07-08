@@ -49,6 +49,7 @@ export default function AuthCard({
   const [error, setError] = useState<string | null>(null);
 
   // OTP
+  const [otpTab, setOtpTab] = useState<Tab>("signin");
   const [otpStep, setOtpStep] = useState<OtpStep>("email");
   const [code, setCode] = useState("");
   const [sentTo, setSentTo] = useState("");
@@ -65,6 +66,12 @@ export default function AuthCard({
   async function requestCode(e?: React.FormEvent) {
     e?.preventDefault();
     resetMsgs();
+    // On the Sign-up tab a name is required (it's what the new account is
+    // created with); the Sign-in tab never asks for it.
+    if (otpTab === "signup" && !name.trim()) {
+      setError("Please enter your name.");
+      return;
+    }
     setPending(true);
     try {
       const res = await fetch("/api/auth/otp/request", {
@@ -170,57 +177,91 @@ export default function AuthCard({
 
   // ── OTP mode ───────────────────────────────────────────────────────────────
   if (otpEnabled && mode === "otp") {
+    const isSignup = otpTab === "signup";
     return (
       <div className={cardClass}>
         {otpStep === "email" ? (
-          <form onSubmit={requestCode} className="flex flex-col gap-4">
-            <div>
-              <h2 className="font-serif text-xl font-medium text-heading">
-                Sign in with your ISB email
-              </h2>
-              <p className="mt-1 text-sm text-muted">
-                We&apos;ll email you a 6-digit code. Membership is limited to
-                I-Venture @ ISB (@isb.edu).
-              </p>
+          <>
+            {/* Sign in / Sign up chooser */}
+            <div className="mb-6 flex border-b border-border">
+              {(
+                [
+                  ["signin", "Sign in"],
+                  ["signup", "Sign up"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => {
+                    setOtpTab(key);
+                    resetMsgs();
+                  }}
+                  aria-pressed={otpTab === key}
+                  className={`relative -mb-px flex-1 px-3 py-3 text-sm font-semibold transition-colors ${
+                    otpTab === key ? "text-brand" : "text-muted hover:text-brand"
+                  }`}
+                >
+                  {label}
+                  {otpTab === key && (
+                    <span className="absolute inset-x-0 bottom-0 h-[3px] bg-brand" />
+                  )}
+                </button>
+              ))}
             </div>
-            <label className={labelClass}>
-              Name{" "}
-              <span className="font-normal text-muted">(new members)</span>
-              <input
-                type="text"
-                maxLength={80}
-                autoComplete="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your full name"
-                className={`mt-1.5 ${inputClass}`}
-              />
-            </label>
-            <label className={labelClass}>
-              ISB email
-              <input
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@isb.edu"
-                className={`mt-1.5 ${inputClass}`}
-              />
-            </label>
-            {error && <p className="text-sm text-danger">{error}</p>}
-            <button type="submit" disabled={pending} className={submitClass}>
-              {pending && <Spinner />}
-              {pending ? "Sending code…" : "Email me a code"}
-              {!pending && (
-                <IviArrow
-                  dir="right"
-                  size={20}
-                  className="transition-transform duration-200 group-hover:translate-x-2"
-                />
+
+            <form onSubmit={requestCode} className="flex flex-col gap-4">
+              <div>
+                <h2 className="font-serif text-xl font-medium text-heading">
+                  {isSignup ? "Create your account" : "Welcome back"}
+                </h2>
+                <p className="mt-1 text-sm text-muted">
+                  {isSignup
+                    ? "Enter your name and ISB email — we'll send a 6-digit code to verify it. Membership is limited to I-Venture @ ISB (@isb.edu)."
+                    : "Enter your ISB email and we'll send a 6-digit code to sign you in."}
+                </p>
+              </div>
+              {isSignup && (
+                <label className={labelClass}>
+                  Name
+                  <input
+                    type="text"
+                    required
+                    maxLength={80}
+                    autoComplete="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Your full name"
+                    className={`mt-1.5 ${inputClass}`}
+                  />
+                </label>
               )}
-            </button>
-          </form>
+              <label className={labelClass}>
+                ISB email
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@isb.edu"
+                  className={`mt-1.5 ${inputClass}`}
+                />
+              </label>
+              {error && <p className="text-sm text-danger">{error}</p>}
+              <button type="submit" disabled={pending} className={submitClass}>
+                {pending && <Spinner />}
+                {pending ? "Sending code…" : "Email me a code"}
+                {!pending && (
+                  <IviArrow
+                    dir="right"
+                    size={20}
+                    className="transition-transform duration-200 group-hover:translate-x-2"
+                  />
+                )}
+              </button>
+            </form>
+          </>
         ) : (
           <form onSubmit={verifyCode} className="flex flex-col gap-4">
             <div>
@@ -230,6 +271,13 @@ export default function AuthCard({
               <p className="mt-1 text-sm text-muted">
                 We sent a 6-digit code to{" "}
                 <span className="font-semibold text-ink">{sentTo}</span>.
+              </p>
+              <p className="mt-2 rounded-input border border-border bg-surface px-3 py-2 text-xs leading-relaxed text-muted">
+                Don&apos;t see it? Check your{" "}
+                <span className="font-semibold text-ink">Spam / Junk</span> folder
+                — ISB mail often files a first-time sender there. Mark it{" "}
+                <span className="font-semibold text-ink">Not junk</span> so future
+                codes land in your inbox.
               </p>
             </div>
             <label className={labelClass}>

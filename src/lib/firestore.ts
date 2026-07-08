@@ -277,10 +277,28 @@ export async function verifyOtp(input: {
 // Members (ivi_users)
 // ---------------------------------------------------------------------------
 
+/**
+ * Backfill array fields that older member docs predate — `interestTags` was
+ * added 2026-07-06, so members who completed onboarding before then have no
+ * such key. Every consumer treats these as arrays (`member.interestTags.length`
+ * on the profile page, the tag-intersection in notification resolvers), so a
+ * missing key would throw. Normalize on read: one chokepoint, no data
+ * migration, and undefined can never reach the UI. Non-array is coerced too.
+ */
+function normalizeMember(data: MemberProfile): MemberProfile {
+  return {
+    ...data,
+    skills: Array.isArray(data.skills) ? data.skills : [],
+    interestTags: Array.isArray(data.interestTags) ? data.interestTags : [],
+    experience: Array.isArray(data.experience) ? data.experience : [],
+    education: Array.isArray(data.education) ? data.education : [],
+  };
+}
+
 /** Fetch a member profile by uid, or null. */
 export async function getMember(uid: string): Promise<MemberProfile | null> {
   const snap = await db.collection(USERS).doc(uid).get();
-  return snap.exists ? (snap.data() as MemberProfile) : null;
+  return snap.exists ? normalizeMember(snap.data() as MemberProfile) : null;
 }
 
 /** Merge-write fields onto `ivi_users/{uid}` (always bumps updatedAt). */
@@ -299,7 +317,7 @@ export async function upsertMember(uid: string, data: Partial<MemberProfile>): P
 export async function listMembers(): Promise<MemberProfile[]> {
   const snap = await db.collection(USERS).where('profileComplete', '==', true).get();
   return snap.docs
-    .map((d) => d.data() as MemberProfile)
+    .map((d) => normalizeMember(d.data() as MemberProfile))
     .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
 }
 
