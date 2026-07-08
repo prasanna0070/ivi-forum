@@ -311,6 +311,18 @@ export function ProfileForm({ initialValues, editMode }: ProfileFormProps) {
           value={values.interestTags}
           onChange={(interestTags) => set('interestTags', interestTags)}
         />
+        <label className="flex cursor-pointer items-start gap-3 rounded-card border border-border bg-surface px-4 py-3">
+          <input
+            type="checkbox"
+            checked={values.emailNotifications}
+            onChange={(e) => set('emailNotifications', e.target.checked)}
+            className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-brand"
+          />
+          <span className="text-sm font-semibold text-ink">
+            Email me when posts match my interests, when I&apos;m mentioned, and when I get
+            replies.
+          </span>
+        </label>
       </SectionCard>
 
       {/* ------------------------------------------------ Experience */}

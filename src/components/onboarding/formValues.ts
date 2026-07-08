@@ -40,6 +40,8 @@ export interface ProfileFormValues {
   skills: string[];
   /** Interest-tag slugs the member follows (defaults + custom). */
   interestTags: string[];
+  /** Notification emails on/off. An ABSENT stored value means opted in. */
+  emailNotifications: boolean;
   experience: ExperienceFormRow[];
   education: EducationFormRow[];
 }
@@ -85,6 +87,9 @@ export function toFormValues(
     interestTags: (s.interestTags ?? []).filter(
       (tag) => typeof tag === 'string' && tag.trim() !== '',
     ),
+    // Only an explicit stored `false` unchecks the toggle — absent means
+    // opted in (the MemberProfile contract), and new profiles default on.
+    emailNotifications: s.emailNotifications !== false,
     experience: (s.experience ?? []).map((e) => ({
       title: e.title ?? '',
       company: e.company ?? '',
@@ -120,6 +125,7 @@ export function toProfilePayload(values: ProfileFormValues): Record<string, unkn
     skills: values.skills.map((s) => s.trim()).filter(Boolean),
     // Slugs are already normalized by the picker; the API re-sanitizes them.
     interestTags: values.interestTags,
+    emailNotifications: values.emailNotifications,
     experience: values.experience
       .filter((row) => row.title.trim() || row.company.trim())
       .map((row) => ({

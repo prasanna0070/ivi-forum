@@ -36,6 +36,11 @@ function toInitialProfile(member: MemberProfile): Partial<MemberProfile> {
     currentTitle: member.currentTitle,
     currentCompany: member.currentCompany,
     skills: member.skills ?? [],
+    // Both fields below MUST round-trip: toProfilePayload always POSTs them,
+    // so omitting them here would reset saved tags to [] and re-check the
+    // notifications toggle for members who unsubscribed.
+    interestTags: member.interestTags ?? [],
+    emailNotifications: member.emailNotifications,
     experience: member.experience ?? [],
     education: member.education ?? [],
   };

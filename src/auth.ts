@@ -5,7 +5,8 @@
  *  - "otp"          — passwordless: a 6-digit code emailed to the address. This
  *                     is the *verified* path (proves mailbox ownership) and is
  *                     gated to approved domains (ALLOWED_EMAIL_DOMAINS, e.g.
- *                     isb.edu). Shown only when email sending is configured.
+ *                     isb.edu). Shown only when email sending is configured
+ *                     (Resend — see src/lib/email.ts).
  *  - "credentials"  — email + password, kept as a fallback so existing accounts
  *                     keep working. Signup is gated to the same domains.
  *
@@ -15,12 +16,11 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
+import { emailConfigured } from "@/lib/email";
 import { getAuthRecord, getMember, verifyOtp } from "@/lib/firestore";
 
-/** Whether passwordless email OTP is available (Gmail sender configured). */
-export const otpEnabled = Boolean(
-  process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD,
-);
+/** Whether passwordless email OTP is available (Resend sender configured). */
+export const otpEnabled = emailConfigured;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,

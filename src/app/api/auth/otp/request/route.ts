@@ -5,7 +5,7 @@
  *   403 { ok: false, error }    email not allowed (non-ISB)
  *   429 { ok: false, error }    rate limited
  *   502 { ok: false, error }    email send failed
- *   503 { ok: false, error }    OTP not configured (no Gmail sender)
+ *   503 { ok: false, error }    OTP not configured (no Resend API key)
  *
  * Gates to ISB emails, mints a 6-digit code (hashed in Firestore), emails it.
  * Verification happens through the NextAuth "otp" provider.

@@ -81,6 +81,12 @@ export interface MemberProfile {
   education: EducationItem[];
   followerCount: number | null;
   connectionCount: number | null;
+  /**
+   * Notification emails (interest matches, mentions, replies). Absent means
+   * opted IN — existing members predate the field. One-click unsubscribe links
+   * and the profile form set it explicitly.
+   */
+  emailNotifications?: boolean;
   /** false until the onboarding form is saved. */
   profileComplete: boolean;
   /** epoch ms — for scrape rate limiting. */

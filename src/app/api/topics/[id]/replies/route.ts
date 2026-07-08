@@ -9,6 +9,7 @@
  */
 import { NextResponse } from 'next/server';
 import { createReply, getMember, getReply } from '@/lib/firestore';
+import { notifyReplyCreated } from '@/lib/notifications';
 import { requireUserApi } from '@/lib/session';
 import { sanitizeImagePaths } from '@/lib/images';
 import { extractMentionUids, sanitizeMentionUids, MAX_MENTIONS } from '@/components/forum/mentions';
@@ -95,6 +96,10 @@ export async function POST(
     if (!reply) {
       return NextResponse.json({ ok: false, error: 'topic-not-found' }, { status: 404 });
     }
+    // Awaited inline (not fire-and-forget) because Cloud Run throttles CPU after
+    // the response is sent; notifyReplyCreated never throws, so the 200 is safe.
+    await notifyReplyCreated(topicId, reply);
+
     return NextResponse.json({ ok: true, id: reply.id });
   } catch (err) {
     console.error(`POST /api/topics/${topicId}/replies failed`, err);

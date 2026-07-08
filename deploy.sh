@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Deploy iVi Forum to Cloud Run.
 # Auth is ADC via the gcloud impersonation already configured in this shell.
-# Secrets (AUTH_SECRET, APIFY_API_TOKEN) come from Secret Manager — nothing sensitive here.
+# Secrets (AUTH_SECRET, APIFY_API_TOKEN, RESEND_API_KEY) come from Secret Manager — nothing sensitive here.
 set -euo pipefail
 
 PROJECT="${GCP_PROJECT:-project-55741ec9-449d-403c-9e5}"
@@ -26,15 +26,19 @@ ENV_VARS="${ENV_VARS},UPLOADS_BUCKET=${UPLOADS_BUCKET}"
 ENV_VARS="${ENV_VARS},APIFY_LINKEDIN_PROFILE_ACTOR=apimaestro~linkedin-profile-batch-scraper-no-cookies-required"
 ENV_VARS="${ENV_VARS},ALLOWED_EMAIL_DOMAINS=${ALLOWED_EMAIL_DOMAINS},ALLOWED_EMAILS=${ALLOWED_EMAILS}"
 
-# Email OTP sign-in activates automatically once the Gmail sender is configured.
-# GMAIL_USER is the sending address; GMAIL_APP_PASSWORD is a Secret Manager secret.
-GMAIL_USER="${GMAIL_USER:-}"
-if [ -n "$GMAIL_USER" ] && gcloud secrets describe ivi-forum-gmail-app-password --project="$PROJECT" >/dev/null 2>&1; then
-  SECRETS="${SECRETS},GMAIL_APP_PASSWORD=ivi-forum-gmail-app-password:latest"
-  ENV_VARS="${ENV_VARS},GMAIL_USER=${GMAIL_USER}"
-  echo "Email OTP: ENABLED (Gmail sender ${GMAIL_USER})"
+# Email (OTP sign-in + notifications) activates automatically once the Resend
+# API key secret exists. EMAIL_FROM must be an address on a Resend-verified
+# domain — isb.quarktex.com is verified on the account this key belongs to.
+# NOTE: --set-env-vars splits its value on commas, so EMAIL_FROM must NEVER
+# contain a comma (e.g. no `Forum, iVi <...>` display names).
+EMAIL_FROM="${EMAIL_FROM:-iVi Forum <forum@isb.quarktex.com>}"
+if gcloud secrets describe ivi-forum-resend-api-key --project="$PROJECT" >/dev/null 2>&1; then
+  SECRETS="${SECRETS},RESEND_API_KEY=ivi-forum-resend-api-key:latest"
+  ENV_VARS="${ENV_VARS},EMAIL_FROM=${EMAIL_FROM}"
+  echo "Email (OTP sign-in + notifications): ENABLED (from: $EMAIL_FROM)"
 else
-  echo "Email OTP: dormant (set GMAIL_USER + create ivi-forum-gmail-app-password to enable)"
+  echo "Email (OTP sign-in + notifications): dormant — create the Resend API key secret to enable:"
+  echo "  printf '%s' \"\$KEY\" | gcloud secrets create ivi-forum-resend-api-key --data-file=-"
 fi
 
 gcloud run deploy "$SERVICE" \

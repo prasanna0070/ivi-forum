@@ -6,6 +6,7 @@
  */
 import { NextResponse } from 'next/server';
 import { createTopic, getMember } from '@/lib/firestore';
+import { notifyTopicCreated } from '@/lib/notifications';
 import { requireUserApi } from '@/lib/session';
 import { sanitizeTags } from '@/components/forum/tags';
 import { extractMentionUids, sanitizeMentionUids, MAX_MENTIONS } from '@/components/forum/mentions';
@@ -25,7 +26,16 @@ export async function POST(request: Request) {
   }
   const payload = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
 
-  const title = typeof payload.title === 'string' ? payload.title.trim() : '';
+  // Titles are single-line and end up in email subjects — collapse control
+  // characters (CR/LF included) so a crafted title can't smuggle MIME headers
+  // into notification sends. Bodies keep their newlines (multi-line by design).
+  const title =
+    typeof payload.title === 'string'
+      ? payload.title
+          .replace(/[\u0000-\u001F\u007F-\u009F]+/g, ' ')
+          .replace(/ {2,}/g, ' ')
+          .trim()
+      : '';
   const body = typeof payload.body === 'string' ? payload.body.trim() : '';
   if (title.length < 1 || title.length > 200) {
     return NextResponse.json(
@@ -71,6 +81,10 @@ export async function POST(request: Request) {
       authorName: member.name,
       authorPhotoUrl: member.photoUrl,
     });
+    // Awaited inline (not fire-and-forget) because Cloud Run throttles CPU after
+    // the response is sent; notifyTopicCreated never throws, so the 200 is safe.
+    await notifyTopicCreated(topic);
+
     return NextResponse.json({ ok: true, id: topic.id });
   } catch (err) {
     console.error('POST /api/topics failed', err);

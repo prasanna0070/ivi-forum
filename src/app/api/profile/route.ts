@@ -4,9 +4,16 @@
  * Request body: the editable subset of MemberProfile —
  *   { name, photoUrl, linkedinUrl, headline, about, location, cohort,
  *     startupName, startupDescription, startupWebsite, currentTitle,
- *     currentCompany, skills, interestTags, experience, education }
+ *     currentCompany, skills, interestTags, experience, education,
+ *     emailNotifications }
  * Everything is validated defensively (types, lengths, list caps) and unknown
- * keys are stripped — the client is never trusted.
+ * keys are stripped — the client is never trusted. `emailNotifications` is
+ * applied only when it's strictly boolean, so a payload that omits it can
+ * never overwrite a saved preference (e.g. a one-click unsubscribe).
+ *
+ * Side effect: the first time a member completes onboarding (their doc goes
+ * profileComplete false → true), a best-effort welcome email is sent — send
+ * failures are logged and never affect the response.
  *
  * Response: 200 { ok: true }
  *           400 { ok: false, error } — validation failure (name required)
@@ -14,7 +21,9 @@
  */
 import { NextResponse } from 'next/server';
 import { requireUserApi } from '@/lib/session';
-import { upsertMember } from '@/lib/firestore';
+import { getMember, upsertMember } from '@/lib/firestore';
+import { sendEmail } from '@/lib/email';
+import { welcomeEmail } from '@/lib/emailTemplates';
 import { sanitizeInterestTags } from '@/components/forum/tags';
 import type { Cohort, EducationItem, ExperienceItem, MemberProfile } from '@/lib/types';
 
@@ -52,6 +61,22 @@ function cleanString(value: unknown, max: number): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   return trimmed ? trimmed.slice(0, max) : null;
+}
+
+/**
+ * cleanString for single-line fields: control characters (CR/LF included)
+ * collapse to a space. The member name is denormalized into topic/reply
+ * author fields and from there into email subjects — internal newlines must
+ * never survive to that surface.
+ */
+function cleanLine(value: unknown, max: number): string | null {
+  const s = cleanString(value, max);
+  if (!s) return null;
+  const flat = s
+    .replace(/[\u0000-\u001F\u007F-\u009F]+/g, ' ')
+    .replace(/ {2,}/g, ' ')
+    .trim();
+  return flat || null;
 }
 
 function cleanCohort(value: unknown): Cohort | null {
@@ -125,7 +150,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: 'Invalid request body' }, { status: 400 });
   }
 
-  const name = cleanString(raw.name, MAX.name);
+  const name = cleanLine(raw.name, MAX.name);
   if (!name) {
     return NextResponse.json({ ok: false, error: 'Name is required' }, { status: 400 });
   }
@@ -148,7 +173,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     interestTags: sanitizeInterestTags(raw.interestTags),
     experience: cleanExperience(raw.experience),
     education: cleanEducation(raw.education),
+    // Strictly-boolean or untouched: undefined never overwrites the saved
+    // preference (Firestore merges with ignoreUndefinedProperties on).
+    emailNotifications:
+      typeof raw.emailNotifications === 'boolean' ? raw.emailNotifications : undefined,
   };
+
+  // Snapshot before the write so we can detect the first-ever completion.
+  const existing = await getMember(user.id);
 
   await upsertMember(user.id, {
     ...validated,
@@ -156,6 +188,16 @@ export async function POST(request: Request): Promise<NextResponse> {
     profileComplete: true,
     updatedAt: Date.now(),
   });
+
+  // First completion of onboarding → best-effort welcome email. Never lets a
+  // send failure (or missing email) affect the saved profile or the response.
+  if (existing && !existing.profileComplete && user.email) {
+    try {
+      await sendEmail({ to: user.email, ...welcomeEmail({ name }) });
+    } catch (err) {
+      console.error('[profile] welcome email failed:', err);
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }
