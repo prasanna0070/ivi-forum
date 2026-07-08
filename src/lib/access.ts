@@ -6,8 +6,10 @@
  *   ALLOWED_EMAILS=someone@gmail.com,...     → specific extra addresses (allowlist)
  *
  * If BOTH are empty/unset, the gate is OPEN (any email) — the original behaviour.
- * Used by the password signup route and the Microsoft OAuth sign-in callback, so
- * both entry paths enforce the same policy (no back door).
+ * A configured domain also admits its subdomains, so a single `isb.edu` entry
+ * covers ISB subdomains like `@ivi.isb.edu` (alumni IDs) too.
+ * Used by the password signup route and the OTP request route, so both entry
+ * paths enforce the same policy (no back door).
  *
  * Pure + dependency-free so it's safe to import anywhere.
  */
@@ -29,6 +31,10 @@ export function isEmailAllowed(email: string): boolean {
   if (domains.length === 0 && allowlist.length === 0) return true;
 
   if (allowlist.includes(e)) return true;
+
   const domain = e.split("@")[1] ?? "";
-  return domains.includes(domain);
+  // Match the exact domain OR any subdomain of it, so one "isb.edu" entry also
+  // admits ISB's subdomains — e.g. alumni on "@ivi.isb.edu". The leading dot is
+  // required so "isb.edu" never matches a lookalike like "notisb.edu".
+  return domains.some((d) => domain === d || domain.endsWith(`.${d}`));
 }
