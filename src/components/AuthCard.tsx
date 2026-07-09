@@ -40,11 +40,12 @@ export default function AuthCard({
 }: {
   otpEnabled?: boolean;
 }) {
-  // Password is the PRIMARY path: it needs no email delivery, so it works even
-  // where ISB's Microsoft 365 tenant quarantines our sign-in codes (it does —
-  // identical mail lands in Gmail but is held for @isb.edu). OTP stays as a
-  // secondary option ("email code instead") for inboxes that do accept it.
-  const [mode, setMode] = useState<Mode>("password");
+  // OTP (email code) is the PRIMARY path when email is configured: verified
+  // sign-in that proves ISB-mailbox ownership. This now reaches ISB inboxes —
+  // the earlier Microsoft-365 quarantine was caused by the code sitting in the
+  // subject line (fixed: the OTP subject is digit-free). Password stays as the
+  // fallback for existing accounts / any inbox that still filters the code.
+  const [mode, setMode] = useState<Mode>(otpEnabled ? "otp" : "password");
 
   // shared
   const [name, setName] = useState("");
