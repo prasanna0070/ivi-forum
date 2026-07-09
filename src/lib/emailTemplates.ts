@@ -234,7 +234,12 @@ function textFooter(unsubscribeUrl?: string): string {
 export function otpEmail(i: { code: string }): EmailContent {
   const code = escapeHtml(i.code);
   return {
-    subject: `${i.code} is your iVi Forum sign-in code`,
+    // Deliverability: the code must NOT appear in the subject. A "<digits> is
+    // your sign-in code" subject is the canonical OTP-phishing shape and gets
+    // hard-quarantined by strict tenants (ISB's Microsoft 365 did exactly this
+    // — verified: the identical mail with the code removed from the subject
+    // delivered fine). Keep the subject digit-free; the code lives in the body.
+    subject: "Sign in to the iVi Forum",
     html: shell({
       preheader: "Enter this code to finish signing in. It expires in 10 minutes.",
       bodyHtml: [
