@@ -5,6 +5,8 @@
 
 export const MAX_IMAGES = 4;
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
+/** Profile photos are one small square — no reason to accept a 5 MB original. */
+export const MAX_AVATAR_BYTES = 3 * 1024 * 1024; // 3 MB
 
 /** Allowed upload content-types → canonical file extension. */
 export const ALLOWED_IMAGE_TYPES: Record<string, string> = {
@@ -25,19 +27,56 @@ export function imageSrc(path: string): string {
   return `/api/uploads/${path}`;
 }
 
+/** Object-path namespaces in the uploads bucket. */
+export const POST_PREFIX = 'posts';
+export const AVATAR_PREFIX = 'avatars';
+
 /**
- * A stored image path is `posts/<uid>/<uuid>.<ext>`. Structural check only
+ * Stored object paths are `<prefix>/<uid>/<uuid>.<ext>`. Structural check only
  * (uid = UUID, object = UUID + allowed ext) — used by the serve route to reject
  * traversal/arbitrary-object reads.
  */
-export function isStoredImagePath(path: unknown): path is string {
+function isStoredPath(path: unknown, prefix: string): path is string {
   if (typeof path !== 'string') return false;
   const parts = path.split('/');
   if (parts.length !== 3) return false;
-  const [prefix, owner, file] = parts;
-  if (prefix !== 'posts') return false;
+  const [got, owner, file] = parts;
+  if (got !== prefix) return false;
   if (!/^[a-f0-9-]{36}$/.test(owner)) return false;
   return /^[a-f0-9-]{36}\.(jpg|png|webp|gif)$/.test(file);
+}
+
+/** `posts/<uid>/<uuid>.<ext>` — a forum post attachment. */
+export function isStoredImagePath(path: unknown): path is string {
+  return isStoredPath(path, POST_PREFIX);
+}
+
+/** `avatars/<uid>/<uuid>.<ext>` — a member profile photo. */
+export function isStoredAvatarPath(path: unknown): path is string {
+  return isStoredPath(path, AVATAR_PREFIX);
+}
+
+/** Anything the serve route is allowed to stream back. */
+export function isServableObjectPath(path: unknown): path is string {
+  return isStoredImagePath(path) || isStoredAvatarPath(path);
+}
+
+/**
+ * Resolve a member's stored `photoUrl` to something an <img> can load.
+ *
+ * Two shapes are legal, because member photos arrive two ways:
+ *   - `avatars/<uid>/<uuid>.<ext>` — ours, in the uploads bucket. Served back
+ *     through /api/uploads. This is the shape we want everyone on.
+ *   - an absolute http(s) URL — a legacy LinkedIn hotlink. These are SIGNED AND
+ *     EXPIRING (see mirrorRemoteAvatar in lib/storage) and will 403 sooner or
+ *     later; passed through so existing profiles keep rendering until their
+ *     next save mirrors them.
+ * Anything else resolves to null → Avatar draws its initials circle.
+ */
+export function avatarSrc(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (isStoredAvatarPath(value)) return imageSrc(value);
+  return /^https?:\/\//i.test(value) ? value : null;
 }
 
 /**

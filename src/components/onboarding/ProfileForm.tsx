@@ -7,9 +7,9 @@
  */
 import { useState } from 'react';
 import { AlertCircle, Plus, X } from 'lucide-react';
-import Avatar from '@/components/Avatar';
 import IviArrow from '@/components/IviArrow';
 import { ChipInput } from '@/components/onboarding/ChipInput';
+import { PhotoPicker } from '@/components/onboarding/PhotoPicker';
 import { InterestTagPicker } from '@/components/onboarding/InterestTagPicker';
 import {
   EMPTY_EDUCATION_ROW,
@@ -163,20 +163,12 @@ export function ProfileForm({ initialValues, editMode }: ProfileFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* ------------------------------------------------ Basics */}
       <SectionCard title="Basics" hint="How you'll appear in the member directory.">
-        <div className="flex items-center gap-4">
-          <Avatar src={values.photoUrl || null} name={values.name || 'Member'} size={64} />
-          <div className="flex-1">
-            <Field label="Photo URL">
-              <input
-                type="url"
-                value={values.photoUrl}
-                onChange={(e) => set('photoUrl', e.target.value)}
-                placeholder="https://…"
-                className={inputClass}
-              />
-            </Field>
-          </div>
-        </div>
+        <PhotoPicker
+          value={values.photoUrl}
+          name={values.name}
+          onChange={(next) => set('photoUrl', next)}
+          inputClass={inputClass}
+        />
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Name" required>
             <input

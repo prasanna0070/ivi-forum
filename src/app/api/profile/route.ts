@@ -25,6 +25,8 @@ import { getMember, upsertMember } from '@/lib/firestore';
 import { sendEmail } from '@/lib/email';
 import { welcomeEmail } from '@/lib/emailTemplates';
 import { sanitizeInterestTags } from '@/components/forum/tags';
+import { mirrorRemoteAvatar } from '@/lib/storage';
+import { isStoredAvatarPath, AVATAR_PREFIX } from '@/lib/images';
 import type { Cohort, EducationItem, ExperienceItem, MemberProfile } from '@/lib/types';
 
 // ---------------------------------------------------------------------------
@@ -135,6 +137,26 @@ function cleanEducation(value: unknown): EducationItem[] {
   return out;
 }
 
+/**
+ * Settle what actually gets stored in `photoUrl`.
+ *
+ *   - An `avatars/<uid>/…` path the caller owns → kept. (Ownership is enforced:
+ *     a path under someone else's uid is rejected rather than adopted.)
+ *   - A remote URL → mirrored into our bucket, because the LinkedIn URLs this
+ *     is almost always carrying are signed and expire in about five weeks. See
+ *     mirrorRemoteAvatar. If the mirror fails we keep the URL — a photo that
+ *     works for another month beats no photo at all.
+ *   - Anything else → null.
+ */
+async function resolvePhoto(uid: string, value: string | null): Promise<string | null> {
+  if (!value) return null;
+  if (isStoredAvatarPath(value)) {
+    return value.startsWith(`${AVATAR_PREFIX}/${uid}/`) ? value : null;
+  }
+  if (!/^https?:\/\//i.test(value)) return null;
+  return (await mirrorRemoteAvatar(uid, value)) ?? value;
+}
+
 // ---------------------------------------------------------------------------
 // Handler
 // ---------------------------------------------------------------------------
@@ -155,10 +177,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: 'Name is required' }, { status: 400 });
   }
 
+  const photoUrl = await resolvePhoto(user.id, cleanString(raw.photoUrl, MAX.url));
+
   // Only these keys ever reach Firestore — unknown keys are dropped here.
   const validated: Partial<MemberProfile> = {
     name,
-    photoUrl: cleanString(raw.photoUrl, MAX.url),
+    photoUrl,
     linkedinUrl: cleanString(raw.linkedinUrl, MAX.url),
     headline: cleanString(raw.headline, MAX.headline),
     about: cleanString(raw.about, MAX.about),

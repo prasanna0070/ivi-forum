@@ -1,15 +1,15 @@
 /**
- * GET /api/uploads/<posts/uid/uuid.ext> — serve a stored forum image.
+ * GET /api/uploads/<posts|avatars/uid/uuid.ext> — serve a stored image.
  *
  * The bucket is private; this route streams the bytes back to signed-in members.
  * Access is gated by the auth proxy (this path is in proxy.ts's matcher, which
  * 401s unauthenticated /api requests), so any member may view any post's images
- * — no per-object ownership check. The path shape is validated to prevent
- * traversal / reads of arbitrary objects.
+ * or any member's avatar — no per-object ownership check. The path shape is
+ * validated to prevent traversal / reads of arbitrary objects.
  */
 import { NextResponse } from 'next/server';
-import { readPostImage, uploadsConfigured } from '@/lib/storage';
-import { isStoredImagePath } from '@/lib/images';
+import { readStoredImage, uploadsConfigured } from '@/lib/storage';
+import { isServableObjectPath } from '@/lib/images';
 
 export async function GET(
   _request: Request,
@@ -20,12 +20,12 @@ export async function GET(
   }
   const { path } = await params;
   const objectPath = (path ?? []).join('/');
-  if (!isStoredImagePath(objectPath)) {
+  if (!isServableObjectPath(objectPath)) {
     return new NextResponse('Not found', { status: 404 });
   }
 
   try {
-    const img = await readPostImage(objectPath);
+    const img = await readStoredImage(objectPath);
     if (!img) return new NextResponse('Not found', { status: 404 });
     return new NextResponse(new Uint8Array(img.buffer), {
       status: 200,
