@@ -36,6 +36,9 @@
  *     additionally takes `hasImages` and drops the quote block when a topic
  *     has neither body nor images.
  *   - otp/welcome carry NO unsubscribe link; notification templates always do.
+ *   - otpEmail additionally carries NO URLs AT ALL — no links, and a text
+ *     wordmark instead of the hosted logo. See the note on otpEmail before
+ *     adding anything clickable or remote to it.
  */
 import { appUrl } from "@/lib/email";
 import { tagLabel } from "@/components/forum/tags";
@@ -177,15 +180,27 @@ function tagChips(slugs: string[]): string {
  * Shared shell: preheader → navy logo band → peach rule → white card →
  * slate footer, centered at 600px on the surface background. The MSO ghost
  * table pins the width in Outlook, which ignores max-width.
+ *
+ * `brandMark` picks how the header band renders the brand:
+ *   "image" (default) — the hosted white logo PNG. Fine for notification mail,
+ *                       which necessarily carries links to the forum anyway.
+ *   "text"            — a CSS-only wordmark, NO remote fetch. Used by the OTP
+ *                       email so that mail contains zero URLs of any kind (see
+ *                       otpEmail for why that matters to Microsoft Defender).
  */
 function shell(i: {
   preheader: string;
   bodyHtml: string;
   unsubscribeUrl?: string;
+  brandMark?: "image" | "text";
 }): string {
   const unsub = i.unsubscribeUrl
     ? `You&rsquo;re getting this because you&rsquo;re an iVi Forum member. <a href="${escapeHtml(i.unsubscribeUrl)}" style="color:${C.footer}; text-decoration:underline">Unsubscribe</a>.<br>`
     : "";
+  const mark =
+    i.brandMark === "text"
+      ? `<span style="font-family:${SERIF}; font-size:21px; line-height:1.2; letter-spacing:0.5px; color:#ffffff">iVi Forum</span>`
+      : `<img src="${appUrl()}/brand/ivi-logo-white.png" width="96" alt="iVi Forum" style="display:block; width:96px; height:auto; border:0">`;
   return `<div style="margin:0; padding:0; background-color:${C.surface}">
 ${preheader(i.preheader)}
 <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="${C.surface}" style="background-color:${C.surface}">
@@ -195,7 +210,7 @@ ${preheader(i.preheader)}
       <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="max-width:600px; margin:0 auto; text-align:left">
         <tr>
           <td bgcolor="${C.brand}" style="background-color:${C.brand}; padding:22px 32px">
-            <img src="${appUrl()}/brand/ivi-logo-white.png" width="96" alt="iVi Forum" style="display:block; width:96px; height:auto; border:0">
+            ${mark}
           </td>
         </tr>
         <tr>
@@ -231,30 +246,73 @@ function textFooter(unsubscribeUrl?: string): string {
 // Templates
 // ---------------------------------------------------------------------------
 
-export function otpEmail(i: { code: string }): EmailContent {
+/**
+ * 6-digit sign-in code. Tuned hard for Microsoft 365 / Defender deliverability,
+ * because ISB's tenant is where these actually have to land. Four rules, each
+ * one earned from a real quarantine:
+ *
+ *  1. NO digits in the subject. "<code> is your sign-in code" is the canonical
+ *     OTP-phishing shape and EOP hard-quarantines it — verified: the identical
+ *     mail with the code pulled out of the subject delivered fine.
+ *  2. NO URLs. Not one — no link, and no remote image either (hence
+ *     brandMark:"text"). Every URL in a message is scored on its own domain
+ *     reputation and detonated by Safe Links; our links resolve to a
+ *     `*.a.run.app` host, a shared cloud-hosting domain with heavy phishing
+ *     history AND a different org domain from the From: address. A credential
+ *     email whose only external reference is a run.app fetch is the exact
+ *     composite Defender scores as phishing. A sign-in code needs no link at
+ *     all, so it now ships with zero — nothing left to score.
+ *  3. Echo the recipient's address. Real transactional mail is specific;
+ *     personalization also pulls the message off the bulk-mail heuristics.
+ *  4. Prose, not a code slab. A near-empty body dominated by one giant styled
+ *     number is the phishing-kit silhouette and tanks the text-to-markup
+ *     ratio. Real sentences around a modest, monospace code read as product
+ *     mail — and the plain-text part carries the same words, so the
+ *     multipart/alternative halves agree (a mismatch is itself a signal).
+ *
+ * Keep all four when editing. They are why this mail reaches the inbox.
+ */
+export function otpEmail(i: { code: string; email?: string }): EmailContent {
   const code = escapeHtml(i.code);
+  const addressed = i.email
+    ? `We received a sign-in request for <strong style="color:${C.brand}">${escapeHtml(i.email)}</strong> on the iVi Forum, the private discussion space for iVi cohort founders.`
+    : "We received a sign-in request on the iVi Forum, the private discussion space for iVi cohort founders.";
+  const addressedText = i.email
+    ? `We received a sign-in request for ${i.email} on the iVi Forum, the private discussion space for iVi cohort founders.`
+    : "We received a sign-in request on the iVi Forum, the private discussion space for iVi cohort founders.";
   return {
-    // Deliverability: the code must NOT appear in the subject. A "<digits> is
-    // your sign-in code" subject is the canonical OTP-phishing shape and gets
-    // hard-quarantined by strict tenants (ISB's Microsoft 365 did exactly this
-    // — verified: the identical mail with the code removed from the subject
-    // delivered fine). Keep the subject digit-free; the code lives in the body.
-    subject: "Sign in to the iVi Forum",
+    subject: "Your iVi Forum sign-in request",
     html: shell({
-      preheader: "Enter this code to finish signing in. It expires in 10 minutes.",
+      brandMark: "text",
+      preheader:
+        "Here is the verification code to finish signing in. It expires in ten minutes.",
       bodyHtml: [
         kicker("Sign in"),
-        heading("Your sign-in code"),
+        heading("Finish signing in"),
+        para(addressed),
         para(
-          "Enter this code to finish signing in to the iVi Forum. It expires in <strong>10 minutes</strong>.",
+          "Type the code below into the sign-in screen you already have open. It expires ten minutes from now, and it only works once.",
         ),
-        `<table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="margin:22px 0 24px"><tr><td align="center" bgcolor="${C.surface}" style="background-color:${C.surface}; border:1px solid ${C.border}; padding:22px 12px"><span style="font-family:${SANS}; font-size:34px; font-weight:700; line-height:1.2; letter-spacing:8px; color:${C.brand}">${code}</span></td></tr></table>`,
+        `<table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="margin:20px 0 22px"><tr><td align="center" bgcolor="${C.surface}" style="background-color:${C.surface}; border:1px solid ${C.border}; padding:20px 12px"><span style="font-family:'SF Mono', Consolas, 'Courier New', monospace; font-size:28px; font-weight:700; line-height:1.2; letter-spacing:6px; color:${C.brand}">${code}</span></td></tr></table>`,
+        para(
+          "If the screen has since closed, go back to the forum in your browser, enter your email address again and request a fresh code.",
+        ),
         fine(
-          "Didn&rsquo;t request this? Ignore this email &mdash; no one can sign in without the code.",
+          "If you didn&rsquo;t ask to sign in, you can safely ignore this message &mdash; the code is useless on its own, and nobody can reach your account without it. We will never ask you to reply with this code, and nobody from the iVi community will ever ask you for it.",
         ),
       ].join("\n"),
     }),
-    text: `Your iVi Forum sign-in code is ${i.code}. It expires in 10 minutes.\n\nDidn't request this? Ignore this email — no one can sign in without the code.${textFooter()}`,
+    text: `Finish signing in to the iVi Forum
+
+${addressedText}
+
+Type this code into the sign-in screen you already have open:
+
+    ${i.code}
+
+It expires ten minutes from now, and it only works once. If the screen has since closed, go back to the forum in your browser, enter your email address again and request a fresh code.
+
+If you didn't ask to sign in, you can safely ignore this message — the code is useless on its own, and nobody can reach your account without it. We will never ask you to reply with this code, and nobody from the iVi community will ever ask you for it.${textFooter()}`,
   };
 }
 

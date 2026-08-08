@@ -7,6 +7,12 @@
  *                    same Resend account used by the ISB class-summary app.
  *   EMAIL_FROM     — sender, e.g. `iVi Forum <forum@isb.quarktex.com>`. Must
  *                    be on a Resend-verified domain. Optional (has a default).
+ *   EMAIL_REPLY_TO — optional Reply-To. Point it at a mailbox a human actually
+ *                    reads: mail that can be replied to scores better with
+ *                    Microsoft EOP than a dead no-reply sender, and a member
+ *                    who can just hit reply is a member who doesn't hit
+ *                    "report phishing" — which is what actually poisons a
+ *                    sending domain inside a tenant. Unset = no header.
  *
  * `emailConfigured` reflects whether the key is present — OTP sign-in and all
  * notification emails stay dormant until it is, so the app never offers a code
@@ -18,6 +24,7 @@ import { otpEmail } from "@/lib/emailTemplates";
 export const emailConfigured = Boolean(process.env.RESEND_API_KEY);
 
 const FROM = process.env.EMAIL_FROM || "iVi Forum <forum@isb.quarktex.com>";
+const REPLY_TO = process.env.EMAIL_REPLY_TO || "";
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
 /** Absolute origin for links inside emails (no trailing slash). */
@@ -67,6 +74,7 @@ export async function sendEmail(msg: OutgoingEmail): Promise<void> {
         subject: msg.subject,
         html: msg.html,
         text: msg.text,
+        ...(REPLY_TO ? { reply_to: REPLY_TO } : {}),
         ...(msg.headers ? { headers: msg.headers } : {}),
       }),
     });
@@ -116,8 +124,11 @@ export async function sendEmails(
   return { sent, failed };
 }
 
-/** Send the 6-digit sign-in code (OTP request route). */
+/**
+ * Send the 6-digit sign-in code (OTP request route). The recipient address is
+ * echoed inside the body on purpose — see the deliverability note on otpEmail.
+ */
 export async function sendOtpEmail(to: string, code: string): Promise<void> {
-  const content = otpEmail({ code });
+  const content = otpEmail({ code, email: to });
   await sendEmail({ to, ...content });
 }

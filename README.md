@@ -73,6 +73,7 @@ ALLOWED_EMAIL_DOMAINS=       # optional, e.g. "isb.edu" — empty = open signup
 RESEND_API_KEY=              # optional — enables OTP sign-in + notification emails
 EMAIL_FROM=                  # optional, e.g. "iVi Forum <forum@your-domain.com>" — must be
                              # on a domain verified in Resend (Domains → Add Domain → DNS)
+EMAIL_REPLY_TO=              # optional — a mailbox a human reads; see Email deliverability
 ```
 
 Firestore auth uses [Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials):
@@ -99,6 +100,30 @@ To enable email, store your Resend key in Secret Manager
 
 (`deploy.sh` in this repo is the reference deployment used for the original instance — it wires
 up the Resend secret automatically when it exists.)
+
+#### Email deliverability (read before touching `emailTemplates.ts`)
+
+Sign-in codes have to survive Microsoft 365 / Defender, which is where this forum's members read
+their mail. Three things keep them out of quarantine, and all three are load-bearing:
+
+1. **No digits in the OTP subject.** `"<code> is your sign-in code"` is the canonical OTP-phishing
+   shape and EOP hard-quarantines it.
+2. **No URLs at all in the OTP email** — no links, and no remote images either (it renders a text
+   wordmark rather than the hosted logo). Every URL is scored on its own domain reputation and
+   detonated by Safe Links; a credential email is the worst place to spend that budget.
+3. **Valid SPF + DKIM + DMARC on the sending domain.** DKIM comes from Resend's DNS setup. DMARC
+   must be a real record — `v=DMARC1` alone, with no `p=` tag, is invalid per RFC 7489 and is
+   discarded by receivers, leaving the domain with *no* policy at all:
+
+   ```
+   _dmarc.<sending-domain>   TXT   "v=DMARC1; p=none; rua=mailto:dmarc@<domain>; adkim=r; aspf=r"
+   ```
+
+Also worth knowing: prefer a sending domain that does **not** look like the recipients' own domain.
+Defender's anti-phishing runs domain-impersonation checks, and a sender like `isb.quarktex.com`
+mailing `@isb.edu` inboxes trips them. Open/click tracking should be **off** for the sending domain
+in the Resend dashboard — it rewrites links through a third-party domain, which re-introduces
+problem 2 even in a mail you wrote to be link-free.
 The included multi-stage `Dockerfile` (Next standalone, node:20-alpine, port 8080) works on any
 container platform.
 

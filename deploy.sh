@@ -29,12 +29,18 @@ ENV_VARS="${ENV_VARS},ALLOWED_EMAIL_DOMAINS=${ALLOWED_EMAIL_DOMAINS},ALLOWED_EMA
 # Email (OTP sign-in + notifications) activates automatically once the Resend
 # API key secret exists. EMAIL_FROM must be an address on a Resend-verified
 # domain — isb.quarktex.com is verified on the account this key belongs to.
-# NOTE: --set-env-vars splits its value on commas, so EMAIL_FROM must NEVER
-# contain a comma (e.g. no `Forum, iVi <...>` display names).
+# NOTE: --set-env-vars splits its value on commas, so EMAIL_FROM and
+# EMAIL_REPLY_TO must NEVER contain a comma (e.g. no `Forum, iVi <...>`).
 EMAIL_FROM="${EMAIL_FROM:-iVi Forum <forum@isb.quarktex.com>}"
+# Reply-To: a mailbox a human reads. Repliable mail scores better with
+# Microsoft EOP, and gives a confused member somewhere to go other than the
+# "report phishing" button — which is what actually burns a sending domain
+# inside a tenant. Unset = header omitted.
+EMAIL_REPLY_TO="${EMAIL_REPLY_TO:-}"
 if gcloud secrets describe ivi-forum-resend-api-key --project="$PROJECT" >/dev/null 2>&1; then
   SECRETS="${SECRETS},RESEND_API_KEY=ivi-forum-resend-api-key:latest"
   ENV_VARS="${ENV_VARS},EMAIL_FROM=${EMAIL_FROM}"
+  [ -n "$EMAIL_REPLY_TO" ] && ENV_VARS="${ENV_VARS},EMAIL_REPLY_TO=${EMAIL_REPLY_TO}"
   echo "Email (OTP sign-in + notifications): ENABLED (from: $EMAIL_FROM)"
 else
   echo "Email (OTP sign-in + notifications): dormant — create the Resend API key secret to enable:"
