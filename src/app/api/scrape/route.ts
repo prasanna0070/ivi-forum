@@ -10,6 +10,10 @@
  *
  * Rate limiting: `lastScrapeAt` is written BEFORE the Apify call so even
  * failed attempts count against the 10-minute window (SPEC "Onboarding flow").
+ *
+ * Photos: the LinkedIn picture is downloaded into our bucket right here and the
+ * prefill carries our `avatars/<uid>/…` path, never LinkedIn's link. LinkedIn
+ * photo links are signed and expire in about five weeks; we keep our own copy.
  */
 import { NextResponse } from 'next/server';
 import { requireUserApi } from '@/lib/session';
@@ -19,6 +23,7 @@ import {
   toProfilePrefill,
 } from '@/lib/linkedin';
 import { getMember, saveScrapeRaw, upsertMember } from '@/lib/firestore';
+import { mirrorRemoteAvatar } from '@/lib/storage';
 
 /** Apify runs take 20–60s; Cloud Run request timeout is 300s (SPEC Deploy). */
 export const maxDuration = 300;
@@ -65,5 +70,10 @@ export async function POST(request: Request): Promise<NextResponse> {
   // Keep the raw payload for future re-parsing (never rendered).
   await saveScrapeRaw(user.id, result.raw ?? null);
 
-  return NextResponse.json({ ok: true, prefill: toProfilePrefill(result.profile) });
+  const prefill = toProfilePrefill(result.profile);
+  // Download and keep the photo now; if that fails the member gets no photo
+  // (they can upload one) rather than a link that will break.
+  prefill.photoUrl = prefill.photoUrl ? await mirrorRemoteAvatar(user.id, prefill.photoUrl) : null;
+
+  return NextResponse.json({ ok: true, prefill });
 }

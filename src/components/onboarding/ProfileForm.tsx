@@ -167,7 +167,6 @@ export function ProfileForm({ initialValues, editMode }: ProfileFormProps) {
           value={values.photoUrl}
           name={values.name}
           onChange={(next) => set('photoUrl', next)}
-          inputClass={inputClass}
         />
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Name" required>

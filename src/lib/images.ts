@@ -64,19 +64,13 @@ export function isServableObjectPath(path: unknown): path is string {
 /**
  * Resolve a member's stored `photoUrl` to something an <img> can load.
  *
- * Two shapes are legal, because member photos arrive two ways:
- *   - `avatars/<uid>/<uuid>.<ext>` — ours, in the uploads bucket. Served back
- *     through /api/uploads. This is the shape we want everyone on.
- *   - an absolute http(s) URL — a legacy LinkedIn hotlink. These are SIGNED AND
- *     EXPIRING (see mirrorRemoteAvatar in lib/storage) and will 403 sooner or
- *     later; passed through so existing profiles keep rendering until their
- *     next save mirrors them.
- * Anything else resolves to null → Avatar draws its initials circle.
+ * Only our own `avatars/<uid>/<uuid>.<ext>` objects are shown, served through
+ * /api/uploads. Photos are always downloaded and kept, never linked: a remote
+ * URL (e.g. a LinkedIn photo link, which expires) resolves to null and the
+ * Avatar draws its initials circle instead.
  */
 export function avatarSrc(value: string | null | undefined): string | null {
-  if (!value) return null;
-  if (isStoredAvatarPath(value)) return imageSrc(value);
-  return /^https?:\/\//i.test(value) ? value : null;
+  return isStoredAvatarPath(value) ? imageSrc(value) : null;
 }
 
 /**

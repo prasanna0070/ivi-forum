@@ -8,10 +8,10 @@ import { avatarSrc } from "@/lib/images";
  * Round member photo, or a brand-tinted initials circle when there's no photo
  * or the photo fails to load.
  *
- * `src` takes a raw stored `photoUrl`, which is either an `avatars/…` object
- * path (ours, permanent) or a legacy remote URL; avatarSrc resolves both. The
- * onError fallback still matters, because the remaining legacy values are
- * LinkedIn signed URLs that expire and start 403ing — see mirrorRemoteAvatar.
+ * `src` takes a raw stored `photoUrl`. Only our own `avatars/…` objects are
+ * shown (avatarSrc); a remote link is never rendered, since photos are always
+ * downloaded and kept. onError still falls back to initials if an object is
+ * missing.
  *
  * Uses a plain <img> on purpose: routing avatars through Next's on-container
  * image optimizer added real latency (a server-side fetch + re-encode per

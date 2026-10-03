@@ -142,19 +142,25 @@ function cleanEducation(value: unknown): EducationItem[] {
  *
  *   - An `avatars/<uid>/…` path the caller owns → kept. (Ownership is enforced:
  *     a path under someone else's uid is rejected rather than adopted.)
- *   - A remote URL → mirrored into our bucket, because the LinkedIn URLs this
- *     is almost always carrying are signed and expire in about five weeks. See
- *     mirrorRemoteAvatar. If the mirror fails we keep the URL — a photo that
- *     works for another month beats no photo at all.
+ *   - A remote URL → downloaded into our bucket (mirrorRemoteAvatar). A link
+ *     is NEVER stored: LinkedIn photo links are signed and expire in about
+ *     five weeks. If the download fails, the member's current stored photo is
+ *     kept, or there is no photo.
  *   - Anything else → null.
  */
-async function resolvePhoto(uid: string, value: string | null): Promise<string | null> {
+async function resolvePhoto(
+  uid: string,
+  value: string | null,
+  current: string | null,
+): Promise<string | null> {
   if (!value) return null;
   if (isStoredAvatarPath(value)) {
     return value.startsWith(`${AVATAR_PREFIX}/${uid}/`) ? value : null;
   }
   if (!/^https?:\/\//i.test(value)) return null;
-  return (await mirrorRemoteAvatar(uid, value)) ?? value;
+  const stored = await mirrorRemoteAvatar(uid, value);
+  if (stored) return stored;
+  return current && isStoredAvatarPath(current) ? current : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -177,7 +183,15 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: 'Name is required' }, { status: 400 });
   }
 
-  const photoUrl = await resolvePhoto(user.id, cleanString(raw.photoUrl, MAX.url));
+  // Snapshot before the write: the current photo is the fallback if a new one
+  // can't be downloaded, and it lets us detect the first-ever completion.
+  const existing = await getMember(user.id);
+
+  const photoUrl = await resolvePhoto(
+    user.id,
+    cleanString(raw.photoUrl, MAX.url),
+    existing?.photoUrl ?? null,
+  );
 
   // Only these keys ever reach Firestore — unknown keys are dropped here.
   const validated: Partial<MemberProfile> = {
@@ -202,9 +216,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     emailNotifications:
       typeof raw.emailNotifications === 'boolean' ? raw.emailNotifications : undefined,
   };
-
-  // Snapshot before the write so we can detect the first-ever completion.
-  const existing = await getMember(user.id);
 
   await upsertMember(user.id, {
     ...validated,

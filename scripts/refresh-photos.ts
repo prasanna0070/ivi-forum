@@ -3,11 +3,11 @@
  *
  * Older profiles stored LinkedIn's signed photo URL, which expires after about
  * five weeks, so those members fall back to initials in the directory. For
- * every member whose photo is missing or a dead hotlink, this re-scrapes their
+ * every member whose photo is missing or is a link (not our copy), this re-scrapes their
  * LinkedIn profile (Apify, ~$0.01 each), mirrors the fresh picture into the
  * uploads bucket (avatars/<uid>/...), and updates ONLY photoUrl. Nothing else
- * on the profile is touched. Members whose photo is already mirrored or still
- * loads are skipped.
+ * on the profile is touched. Members whose photo is already a stored copy are
+ * skipped.
  *
  * Run (dry run lists what it would do; add --apply to write):
  *   APIFY_API_TOKEN=$(gcloud secrets versions access latest --secret=ivi-forum-apify-token) \
@@ -21,33 +21,25 @@ import type { MemberProfile } from "@/lib/types";
 
 const apply = process.argv.includes("--apply");
 
-async function photoWorks(url: string): Promise<boolean> {
-  if (url.startsWith("avatars/")) return true;
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
 async function main() {
   const snap = await db.collection("ivi_users").get();
   let fixed = 0;
   let failed = 0;
   for (const doc of snap.docs) {
     const m = doc.data() as MemberProfile;
-    if (m.photoUrl && (await photoWorks(m.photoUrl))) continue;
+    // Only our own stored copies count; any link (even one that still loads)
+    // is replaced, because links are never shown.
+    if (m.photoUrl?.startsWith("avatars/")) continue;
     if (!m.linkedinUrl) {
       console.log(`skip  ${m.name}: no LinkedIn URL`);
       continue;
     }
     if (!apply) {
-      console.log(`would ${m.name}: ${m.photoUrl ? "dead hotlink" : "no photo"}`);
+      console.log(`would ${m.name}: ${m.photoUrl ? "link, not a stored copy" : "no photo"}`);
       continue;
     }
     const scraped = await scrapeLinkedInProfile(m.linkedinUrl);
-    const fresh = scraped.ok ? scraped.profile.profilePictureUrl : null;
+    const fresh = scraped.ok ? scraped.profile?.profilePictureUrl : null;
     if (!fresh) {
       console.log(`FAIL  ${m.name}: ${scraped.ok ? "LinkedIn has no photo" : scraped.error}`);
       failed += 1;

@@ -3,16 +3,10 @@
 /**
  * Profile photo control for the onboarding/edit form.
  *
- * Controlled: `value` is whatever gets saved to `photoUrl` — either an
- * `avatars/<uid>/…` object path (uploaded here) or a remote URL (prefilled
- * from the LinkedIn scrape). Uploading POSTs to /api/uploads with kind=avatar
- * and swaps `value` for the returned path.
- *
- * Upload is the primary action on purpose. A scraped LinkedIn photo is a
- * signed URL that expires in about five weeks, so the URL field alone left
- * members' avatars decaying into initials circles; an uploaded photo lands in
- * our own bucket and never expires. (Saving also mirrors a LinkedIn URL
- * server-side — see mirrorRemoteAvatar — so the prefill path is durable too.)
+ * Controlled: `value` is whatever gets saved to `photoUrl` — always an
+ * `avatars/<uid>/…` object path in our bucket: uploaded here, or downloaded
+ * from LinkedIn by the scrape. There is no image-URL field on purpose: photos
+ * are never stored as links (LinkedIn's expire in about five weeks).
  */
 import { useRef, useState } from 'react';
 import { Loader2, Upload } from 'lucide-react';
@@ -31,12 +25,10 @@ export function PhotoPicker({
   value,
   name,
   onChange,
-  inputClass,
 }: {
   value: string;
   name: string;
   onChange: (next: string) => void;
-  inputClass: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -125,24 +117,9 @@ export function PhotoPicker({
         aria-label="Upload a profile photo"
       />
 
-      {!uploaded && (
-        <label className="mt-3 block">
-          <span className="mb-1.5 block text-sm font-medium text-muted">
-            Or use an image URL{value ? '' : ' (we prefill this from LinkedIn)'}
-          </span>
-          <input
-            type="url"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="https://…"
-            className={inputClass}
-          />
-        </label>
-      )}
-
       <p className="mt-2 text-xs text-muted">
         {uploaded
-          ? 'Uploaded to the forum — this one will not expire.'
+          ? 'Saved on the forum. This photo will not expire.'
           : `JPEG, PNG, WebP or GIF, up to ${MAX_MB} MB.`}
       </p>
 
