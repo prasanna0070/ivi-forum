@@ -1,31 +1,57 @@
 /**
- * Transactional email via Resend (https://resend.com) — plain REST, no SDK.
+ * Transactional email. Two transports, picked by which secrets are present:
+ *
+ *  1. Gmail SMTP (primary) — nodemailer over smtp.gmail.com:587, signed in as
+ *     the cohort mailbox with a Gmail app password. Mail from a real Gmail
+ *     account lands in ISB's Microsoft 365 inboxes where Resend mail from
+ *     isb.quarktex.com was being quarantined; the IVI valedictorian nomination
+ *     app proved this path on the same tenant.
+ *  2. Resend REST (fallback) — used only when SMTP is not configured.
  *
  * Env:
- *   RESEND_API_KEY — Secret Manager `ivi-forum-resend-api-key` on Cloud Run.
- *                    The sending domain (isb.quarktex.com) is verified on the
- *                    same Resend account used by the ISB class-summary app.
- *   EMAIL_FROM     — sender, e.g. `iVi Forum <forum@isb.quarktex.com>`. Must
- *                    be on a Resend-verified domain. Optional (has a default).
+ *   SMTP_USER      — Gmail address, e.g. isbivico4@gmail.com.
+ *   SMTP_PASS      — its 16-char Gmail app password. Secret Manager
+ *                    `ivi-forum-smtp-pass` on Cloud Run.
+ *   RESEND_API_KEY — Secret Manager `ivi-forum-resend-api-key` (fallback only).
+ *   EMAIL_FROM     — sender display. With SMTP it must use the SMTP_USER
+ *                    address (Gmail rewrites any other From); defaults to
+ *                    `iVi Forum <SMTP_USER>`. With Resend it must be on a
+ *                    Resend-verified domain.
  *   EMAIL_REPLY_TO — optional Reply-To. Point it at a mailbox a human actually
  *                    reads: mail that can be replied to scores better with
  *                    Microsoft EOP than a dead no-reply sender, and a member
  *                    who can just hit reply is a member who doesn't hit
- *                    "report phishing" — which is what actually poisons a
- *                    sending domain inside a tenant. Unset = no header.
+ *                    "report phishing". Unset = no header.
  *
- * `emailConfigured` reflects whether the key is present — OTP sign-in and all
- * notification emails stay dormant until it is, so the app never offers a code
- * it can't send. Without the key, sends are logged to the server console
- * instead (local dev). Server-only.
+ * `emailConfigured` reflects whether either transport is present — OTP sign-in
+ * and all notification emails stay dormant until one is, so the app never
+ * offers a code it can't send. Without either, sends are logged to the server
+ * console instead (local dev). Server-only.
  */
+import nodemailer from "nodemailer";
 import { otpEmail } from "@/lib/emailTemplates";
 
-export const emailConfigured = Boolean(process.env.RESEND_API_KEY);
+const SMTP_USER = process.env.SMTP_USER || "";
+const SMTP_PASS = process.env.SMTP_PASS || "";
+const smtpConfigured = Boolean(SMTP_USER && SMTP_PASS);
+const resendConfigured = Boolean(process.env.RESEND_API_KEY);
 
-const FROM = process.env.EMAIL_FROM || "iVi Forum <forum@isb.quarktex.com>";
+export const emailConfigured = smtpConfigured || resendConfigured;
+
+const FROM =
+  process.env.EMAIL_FROM ||
+  (smtpConfigured ? `iVi Forum <${SMTP_USER}>` : "iVi Forum <forum@isb.quarktex.com>");
 const REPLY_TO = process.env.EMAIL_REPLY_TO || "";
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
+
+const smtp = smtpConfigured
+  ? nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    })
+  : null;
 
 /** Absolute origin for links inside emails (no trailing slash). */
 export function appUrl(): string {
@@ -41,7 +67,10 @@ export interface OutgoingEmail {
   headers?: Record<string, string>;
 }
 
-/** Resend's default plan allows 2 requests/second — pace everything to that. */
+/**
+ * Resend's default plan allows 2 requests/second; Gmail has no per-second cap
+ * but throttles bursts. Pace everything to 2/s either way.
+ */
 const RATE_LIMIT_PER_SECOND = 2;
 const RATE_LIMIT_MAX_RETRIES = 2;
 
@@ -50,15 +79,30 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Send one email via Resend. Throws on failure (callers that must not fail —
+ * Send one email over Gmail SMTP (or Resend as fallback). Throws on failure (callers that must not fail —
  * notification fan-out — go through `sendEmails`, which swallows per-recipient
  * errors). A 429 (rate limited) is retried a couple of times, honoring the
  * Retry-After header, so a concurrent fan-out can't starve an OTP send.
- * When no API key is configured, logs the send and returns.
+ * When no transport is configured, logs the send and returns.
  */
 export async function sendEmail(msg: OutgoingEmail): Promise<void> {
   if (!emailConfigured) {
     console.log(`[email] not configured — would send "${msg.subject}" to ${msg.to}`);
+    return;
+  }
+  if (smtp) {
+    const info = await smtp.sendMail({
+      from: FROM,
+      to: msg.to,
+      subject: msg.subject,
+      html: msg.html,
+      text: msg.text,
+      ...(REPLY_TO ? { replyTo: REPLY_TO } : {}),
+      ...(msg.headers ? { headers: msg.headers } : {}),
+    });
+    if (info.rejected && info.rejected.length > 0) {
+      throw new Error(`SMTP rejected ${msg.to}: ${String(info.response).slice(0, 300)}`);
+    }
     return;
   }
   for (let attempt = 0; ; attempt += 1) {

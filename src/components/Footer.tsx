@@ -48,6 +48,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/privacy" className={linkClass}>
+                  Privacy
+                </Link>
+              </li>
+              <li>
                 <a
                   href="https://github.com/prasanna0070/ivi-forum"
                   target="_blank"

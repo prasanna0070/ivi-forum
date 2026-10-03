@@ -38,12 +38,31 @@ export interface AuthRecord {
    */
   passwordHash?: string;
   /** How the account was first created. */
-  provider?: 'password' | 'microsoft' | 'otp';
+  provider?: 'password' | 'microsoft' | 'otp' | 'google';
   createdAt: number;
 }
 
 /**
- * `ivi_otp/{emailLower}` — a pending email one-time-code (passwordless sign-in).
+ * `ivi_google/{googleSub}` — links a Google account (the only way to sign in)
+ * to the member it proved itself to be by verifying an ISB mailbox with a code.
+ * Google is the durable identity: ISB student addresses (@isb.edu) end at
+ * graduation and alumni get new ones (@ivi.isb.edu), but the Google account
+ * stays the same.
+ */
+export interface GoogleLink {
+  /** Google's stable subject id (also the doc id). */
+  sub: string;
+  /** Key of `ivi_users`. */
+  uid: string;
+  /** The Google account's own address, for support lookups. */
+  googleEmail: string;
+  /** The ISB address whose code was verified (lowercased). */
+  isbEmail: string;
+  linkedAt: number;
+}
+
+/**
+ * `ivi_otp/{emailLower}` — a pending email one-time-code (ISB mailbox check).
  * The code itself is bcrypt-hashed; short-lived and attempt-limited.
  */
 export interface OtpRecord {

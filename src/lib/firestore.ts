@@ -11,6 +11,7 @@ import { hash, compare } from 'bcryptjs';
 import { Firestore } from '@google-cloud/firestore';
 import type {
   AuthRecord,
+  GoogleLink,
   MemberProfile,
   OtpRecord,
   Reply,
@@ -42,13 +43,14 @@ if (!globalForFirestore.__iviFirestore) globalForFirestore.__iviFirestore = db;
 
 const AUTH = 'ivi_auth';
 const OTP = 'ivi_otp';
+const GOOGLE = 'ivi_google';
 const USERS = 'ivi_users';
 const TOPICS = 'ivi_topics';
 const REPLIES = 'replies'; // subcollection of ivi_topics/{id}
 const VOTES = 'ivi_votes';
 
 // ---------------------------------------------------------------------------
-// Auth records (ivi_auth) — read ONLY by auth.ts and the signup route.
+// Auth records (ivi_auth) — one per verified ISB email → member uid.
 // ---------------------------------------------------------------------------
 
 /** Fetch the credential record for a (lowercased) email, or null. */
@@ -58,61 +60,7 @@ export async function getAuthRecord(emailLower: string): Promise<AuthRecord | nu
 }
 
 /**
- * Signup: transactionally create `ivi_auth/{emailLower}` plus a skeleton
- * `ivi_users/{uid}` (profileComplete=false). The caller hashes the password.
- * Returns `{ok:false, error:'email-exists'}` when the email is already taken.
- */
-export async function createAuthUser(input: {
-  name: string;
-  email: string;
-  passwordHash: string;
-}): Promise<{ ok: true; uid: string } | { ok: false; error: 'email-exists' }> {
-  const emailLower = input.email.trim().toLowerCase();
-  const authRef = db.collection(AUTH).doc(emailLower);
-  const uid = randomUUID();
-  const now = Date.now();
-
-  const created = await db.runTransaction(async (tx) => {
-    const existing = await tx.get(authRef);
-    if (existing.exists) return false;
-
-    const authRecord: AuthRecord = { email: emailLower, uid, passwordHash: input.passwordHash, createdAt: now };
-    const skeleton: MemberProfile = {
-      uid,
-      email: emailLower,
-      name: input.name,
-      photoUrl: null,
-      linkedinUrl: null,
-      headline: null,
-      about: null,
-      location: null,
-      cohort: null,
-      startupName: null,
-      startupDescription: null,
-      startupWebsite: null,
-      currentTitle: null,
-      currentCompany: null,
-      skills: [],
-      interestTags: [],
-      experience: [],
-      education: [],
-      followerCount: null,
-      connectionCount: null,
-      profileComplete: false,
-      lastScrapeAt: null,
-      createdAt: now,
-      updatedAt: now,
-    };
-    tx.create(authRef, authRecord);
-    tx.set(db.collection(USERS).doc(uid), skeleton);
-    return true;
-  });
-
-  return created ? { ok: true, uid } : { ok: false, error: 'email-exists' };
-}
-
-/**
- * Find-or-create an account for a VERIFIED email (OTP or OAuth), keyed by email.
+ * Find-or-create an account for a VERIFIED email (ISB code or Google), keyed by email.
  * If an `ivi_auth/{email}` already exists (password or prior verified login), its
  * uid is reused — so verified sign-in LINKS to the same profile as a pre-existing
  * password account with that email. Otherwise a fresh skeleton profile
@@ -122,7 +70,7 @@ export async function createAuthUser(input: {
 export async function ensureVerifiedAccount(input: {
   email: string;
   name: string;
-  provider: 'microsoft' | 'otp';
+  provider: 'microsoft' | 'otp' | 'google';
 }): Promise<{ uid: string; isNew: boolean }> {
   const emailLower = input.email.trim().toLowerCase();
   const authRef = db.collection(AUTH).doc(emailLower);
@@ -173,7 +121,47 @@ export async function ensureVerifiedAccount(input: {
 }
 
 // ---------------------------------------------------------------------------
-// One-time email codes (ivi_otp) — passwordless sign-in
+// Google account links (ivi_google) — Google sign-in → member uid
+// ---------------------------------------------------------------------------
+
+/** The member uid a Google account is linked to, or null if not linked yet. */
+export async function getGoogleLink(sub: string): Promise<GoogleLink | null> {
+  if (!sub) return null;
+  const snap = await db.collection(GOOGLE).doc(sub).get();
+  return snap.exists ? (snap.data() as GoogleLink) : null;
+}
+
+/**
+ * Link a Google account to the member who owns a verified ISB mailbox. The
+ * account is found-or-created by that mailbox (ensureVerifiedAccount), so an
+ * existing member who verifies their old @isb.edu address keeps their profile.
+ * Re-linking the same Google account just refreshes the record.
+ */
+export async function linkGoogleAccount(input: {
+  sub: string;
+  googleEmail: string;
+  isbEmail: string;
+  name: string;
+}): Promise<{ uid: string; isNew: boolean }> {
+  const isbEmail = input.isbEmail.trim().toLowerCase();
+  const account = await ensureVerifiedAccount({
+    email: isbEmail,
+    name: input.name,
+    provider: 'google',
+  });
+  const link: GoogleLink = {
+    sub: input.sub,
+    uid: account.uid,
+    googleEmail: input.googleEmail.trim().toLowerCase(),
+    isbEmail,
+    linkedAt: Date.now(),
+  };
+  await db.collection(GOOGLE).doc(input.sub).set(link);
+  return account;
+}
+
+// ---------------------------------------------------------------------------
+// One-time email codes (ivi_otp) — ISB mailbox verification
 // ---------------------------------------------------------------------------
 
 const CODE_TTL_MS = 10 * 60 * 1000; // codes valid for 10 minutes
@@ -235,15 +223,15 @@ export async function startOtp(input: {
 }
 
 /**
- * Verify a submitted code. On success the code is consumed and the account is
- * found-or-created (linking to any existing profile by email). Wrong guesses are
- * counted; the code dies after MAX_ATTEMPTS or when it expires.
+ * Verify a submitted code. On success the code is consumed and the mailbox is
+ * proven; the caller links it to the signed-in Google account. Wrong guesses
+ * are counted; the code dies after MAX_ATTEMPTS or when it expires.
  */
 export async function verifyOtp(input: {
   email: string;
   code: string;
 }): Promise<
-  | { ok: true; uid: string }
+  | { ok: true; email: string; name: string }
   | { ok: false; error: 'invalid' | 'expired' | 'too_many' | 'not_found' }
 > {
   const email = input.email.trim().toLowerCase();
@@ -269,8 +257,7 @@ export async function verifyOtp(input: {
   }
 
   await ref.delete();
-  const { uid } = await ensureVerifiedAccount({ email, name: rec.name, provider: 'otp' });
-  return { ok: true, uid };
+  return { ok: true, email, name: rec.name };
 }
 
 // ---------------------------------------------------------------------------

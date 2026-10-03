@@ -1,5 +1,12 @@
 /**
- * Route protection (Next 16 renamed `middleware.ts` → `proxy.ts`).
+ * Canonical host + route protection (Next 16 renamed `middleware.ts` →
+ * `proxy.ts`).
+ *
+ * Canonical host: Cloud Run answers on two hostnames (the readable
+ * `ivi-forum-<project-number>.asia-south1.run.app` and the legacy hashed
+ * `ivi-forum-<hash>-el.a.run.app`). Google sign-in only works on the host in
+ * AUTH_URL (its callback and cookies live there), so every request on any
+ * other host is redirected to it, keeping the path.
  *
  * Optimistic check only: verifies the NextAuth JWT session cookie with
  * `getToken` (jose — edge-safe, no Node/Firestore deps). Every protected API
@@ -26,8 +33,42 @@ async function hasSession(req: NextRequest): Promise<boolean> {
   return token !== null;
 }
 
+const PROTECTED = [
+  "/directory",
+  "/forum",
+  "/onboarding",
+  "/profile",
+  "/api/scrape",
+  "/api/profile",
+  "/api/members",
+  "/api/topics",
+  "/api/votes",
+  "/api/uploads",
+];
+
+function canonicalRedirect(req: NextRequest): NextResponse | null {
+  const authUrl = process.env.AUTH_URL;
+  if (!authUrl) return null;
+  let canonical: URL;
+  try {
+    canonical = new URL(authUrl);
+  } catch {
+    return null;
+  }
+  // Behind Cloud Run the request URL's host is the public hostname.
+  const host = req.headers.get("host") ?? req.nextUrl.host;
+  if (!host || host === canonical.host || host.startsWith("localhost")) return null;
+  const target = new URL(req.nextUrl.pathname + req.nextUrl.search, canonical.origin);
+  return NextResponse.redirect(target, 308);
+}
+
 export async function proxy(req: NextRequest) {
-  if (await hasSession(req)) return NextResponse.next();
+  const redirect = canonicalRedirect(req);
+  if (redirect) return redirect;
+
+  const path = req.nextUrl.pathname;
+  const isProtected = PROTECTED.some((p) => path === p || path.startsWith(`${p}/`));
+  if (!isProtected || (await hasSession(req))) return NextResponse.next();
 
   if (req.nextUrl.pathname.startsWith("/api/")) {
     return NextResponse.json({ ok: false, error: "Unauthenticated." }, { status: 401 });
@@ -36,17 +77,7 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // `:path*` matches zero or more segments, so `/directory` itself is covered.
-  matcher: [
-    "/directory/:path*",
-    "/forum/:path*",
-    "/onboarding/:path*",
-    "/profile/:path*",
-    "/api/scrape/:path*",
-    "/api/profile/:path*",
-    "/api/members/:path*",
-    "/api/topics/:path*",
-    "/api/votes/:path*",
-    "/api/uploads/:path*",
-  ],
+  // Every page and API route (for the canonical-host redirect); static build
+  // assets are skipped. Protection is decided by PROTECTED above.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

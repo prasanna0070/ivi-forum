@@ -1,25 +1,33 @@
 /**
  * NextAuth v5 configuration.
  *
- * Two ways in:
- *  - "otp"          — passwordless: a 6-digit code emailed to the address. This
- *                     is the *verified* path (proves mailbox ownership) and is
- *                     gated to approved domains (ALLOWED_EMAIL_DOMAINS, e.g.
- *                     isb.edu). Shown only when email sending is configured
- *                     (Resend — see src/lib/email.ts).
- *  - "credentials"  — email + password, kept as a fallback so existing accounts
- *                     keep working. Signup is gated to the same domains.
+ * Sign-in is Google only. Joining is four steps:
+ *  1. Sign in with Google (any Google account; it is the durable identity —
+ *     ISB student addresses end at graduation, the Google account doesn't).
+ *  2. Prove you are ISB: type an ISB address (@isb.edu, or the alumni
+ *     @ivi.isb.edu) and enter the 6-digit code mailed to it. That links the
+ *     Google account to the member who owns the mailbox (`ivi_google/{sub}`),
+ *     so an existing member who verifies their old address keeps their profile.
+ *  3. Onboarding (LinkedIn-powered profile).
+ *  4. In.
  *
- * Server-only: imports Firestore + bcryptjs. Never import from a client
- * component (use `next-auth/react`) or from src/proxy.ts (edge-safe via getToken).
+ * A Google session that isn't linked yet carries `googleSub` but no `id`, so
+ * every page/API that needs a member (`requireUser`, `requireUserApi`) treats it
+ * as signed out and the landing page shows step 2. Sessions from the retired
+ * password / email-code sign-in have no `googleSub` and are ignored.
+ *
+ * Env: AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET (read by Auth.js automatically).
+ *
+ * Server-only: imports Firestore. Never import from a client component (use
+ * `next-auth/react`) or from src/proxy.ts (edge-safe via getToken).
  */
 import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { compare } from "bcryptjs";
+import Google from "next-auth/providers/google";
+import { isEmailAllowed } from "@/lib/access";
 import { emailConfigured } from "@/lib/email";
-import { getAuthRecord, getMember, verifyOtp } from "@/lib/firestore";
+import { getGoogleLink, getMember, linkGoogleAccount } from "@/lib/firestore";
 
-/** Whether passwordless email OTP is available (Resend sender configured). */
+/** Whether ISB mailbox verification can run (an email transport is configured). */
 export const otpEnabled = emailConfigured;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -31,78 +39,59 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: "/",
   },
   providers: [
-    // ── Passwordless email OTP (verified) ──────────────────────────────────
-    Credentials({
-      id: "otp",
-      name: "Email code",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        code: { label: "Code", type: "text" },
-      },
-      async authorize(credentials) {
-        const email =
-          typeof credentials?.email === "string"
-            ? credentials.email.trim().toLowerCase()
-            : "";
-        const code =
-          typeof credentials?.code === "string" ? credentials.code.trim() : "";
-        if (!email || !code) return null;
-
-        const result = await verifyOtp({ email, code });
-        if (!result.ok) return null;
-
-        const member = await getMember(result.uid).catch(() => null);
-        return {
-          id: result.uid,
-          email,
-          name: member?.name || email,
-        };
-      },
-    }),
-
-    // ── Email + password (fallback) ────────────────────────────────────────
-    Credentials({
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        const email =
-          typeof credentials?.email === "string"
-            ? credentials.email.trim().toLowerCase()
-            : "";
-        const password =
-          typeof credentials?.password === "string" ? credentials.password : "";
-        if (!email || !password) return null;
-
-        const record = await getAuthRecord(email);
-        if (!record || !record.passwordHash) return null;
-
-        const ok = await compare(password, record.passwordHash);
-        if (!ok) return null;
-
-        const member = await getMember(record.uid).catch(() => null);
-        return {
-          id: record.uid,
-          email: record.email,
-          name: member?.name || record.email,
-        };
-      },
+    Google({
+      // Always show the account chooser: members often have a personal and a
+      // work Google account and must pick the one they'll keep using.
+      authorization: { params: { prompt: "select_account" } },
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
-      // Both providers return a fully-resolved user (id = our uid).
-      if (user) {
-        token.id = user.id;
-        token.email = user.email ?? token.email;
-        token.name = user.name ?? token.name;
+    async jwt({ token, account, profile }) {
+      if (account?.provider === "google" && profile?.sub) {
+        token.googleSub = profile.sub;
+        token.googleEmail = (profile.email ?? "").toLowerCase();
+        token.name = profile.name ?? token.name;
+        token.picture = (profile.picture as string | undefined) ?? token.picture;
+        token.id = undefined;
+
+        let link = await getGoogleLink(profile.sub);
+        // A Google account whose own address is already an approved one (an
+        // ISB Google login, or an allowlisted personal address) is verified by
+        // Google itself — link it straight away and skip the code step.
+        if (
+          !link &&
+          profile.email_verified === true &&
+          token.googleEmail &&
+          isEmailAllowed(token.googleEmail)
+        ) {
+          await linkGoogleAccount({
+            sub: profile.sub,
+            googleEmail: token.googleEmail,
+            isbEmail: token.googleEmail,
+            name: profile.name ?? "",
+          });
+          link = await getGoogleLink(profile.sub);
+        }
+        if (link) token.id = link.uid;
+      } else if (token.googleSub && !token.id) {
+        // Pending (step 2). Re-check on each read so the session picks up the
+        // link as soon as the mailbox is verified.
+        const link = await getGoogleLink(token.googleSub);
+        if (link) token.id = link.uid;
+      }
+
+      if (token.id && (!token.name || token.name === token.googleEmail)) {
+        const member = await getMember(token.id).catch(() => null);
+        if (member?.name) token.name = member.name;
       }
       return token;
     },
     session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id ?? token.sub ?? "";
+        // Only a Google session linked to a member counts as signed in.
+        session.user.id = token.googleSub && token.id ? token.id : "";
+        session.user.googleSub = token.googleSub ?? null;
+        session.user.googleEmail = token.googleEmail ?? null;
         if (token.email) session.user.email = token.email;
         session.user.name = token.name ?? null;
       }

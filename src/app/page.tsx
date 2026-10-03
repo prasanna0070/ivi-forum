@@ -1,6 +1,7 @@
 /**
- * Landing page — signed-in users bounce straight into the app
- * (/directory, or /onboarding until the profile is complete).
+ * Landing page — signed-in members bounce straight into the app
+ * (/directory, or /onboarding until the profile is complete). A Google account
+ * that hasn't verified an ISB email yet sees only step 2 (<VerifyIsbCard>).
  *
  * Full-bleed banded layout (navy hero → surface features → white join).
  * The `-mx-4 sm:-mx-6 -my-8` wrapper cancels the shared <main> padding so the
@@ -13,6 +14,7 @@ import { Users, MessageSquare, Zap } from "lucide-react";
 import { auth, otpEnabled } from "@/auth";
 import { getMember } from "@/lib/firestore";
 import AuthCard from "@/components/AuthCard";
+import VerifyIsbCard from "@/components/VerifyIsbCard";
 import Card from "@/components/Card";
 import IviArrow from "@/components/IviArrow";
 
@@ -45,6 +47,26 @@ export default async function Home() {
   if (session?.user?.id) {
     const member = await getMember(session.user.id).catch(() => null);
     redirect(member?.profileComplete ? "/directory" : "/onboarding");
+  }
+  if (session?.user?.googleSub) {
+    return (
+      <div className="flex flex-col items-center py-10 sm:py-16">
+        <div className="mb-8 max-w-xl text-center">
+          <h1 className="font-serif text-3xl font-medium leading-tight text-heading">
+            One quick check
+          </h1>
+          <p className="mt-3 text-base leading-relaxed text-ink">
+            The iVi Forum is for I-Venture @ ISB founders. Verify your ISB email
+            once and this Google account is your way in for good, even after
+            your ISB address changes.
+          </p>
+        </div>
+        <VerifyIsbCard
+          googleEmail={session.user.googleEmail ?? ""}
+          otpEnabled={otpEnabled}
+        />
+      </div>
+    );
   }
 
   return (
@@ -153,11 +175,11 @@ export default async function Home() {
               Get in the room
             </h2>
             <p className="mt-4 text-base leading-relaxed text-ink">
-              Sign in with your account, or create one in seconds — your profile
+              Sign in with Google, confirm your ISB email once, and your profile
               builds itself from LinkedIn.
             </p>
           </div>
-          <AuthCard otpEnabled={otpEnabled} />
+          <AuthCard />
         </div>
       </section>
     </div>

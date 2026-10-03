@@ -275,44 +275,44 @@ function textFooter(unsubscribeUrl?: string): string {
 export function otpEmail(i: { code: string; email?: string }): EmailContent {
   const code = escapeHtml(i.code);
   const addressed = i.email
-    ? `We received a sign-in request for <strong style="color:${C.brand}">${escapeHtml(i.email)}</strong> on the iVi Forum, the private discussion space for iVi cohort founders.`
-    : "We received a sign-in request on the iVi Forum, the private discussion space for iVi cohort founders.";
+    ? `Someone asked to confirm <strong style="color:${C.brand}">${escapeHtml(i.email)}</strong> as their ISB email on the iVi Forum, the private discussion space for iVi cohort founders.`
+    : "Someone asked to confirm this ISB email on the iVi Forum, the private discussion space for iVi cohort founders.";
   const addressedText = i.email
-    ? `We received a sign-in request for ${i.email} on the iVi Forum, the private discussion space for iVi cohort founders.`
-    : "We received a sign-in request on the iVi Forum, the private discussion space for iVi cohort founders.";
+    ? `Someone asked to confirm ${i.email} as their ISB email on the iVi Forum, the private discussion space for iVi cohort founders.`
+    : "Someone asked to confirm this ISB email on the iVi Forum, the private discussion space for iVi cohort founders.";
   return {
-    subject: "Your iVi Forum sign-in request",
+    subject: "Confirm your ISB email for the iVi Forum",
     html: shell({
       brandMark: "text",
       preheader:
-        "Here is the verification code to finish signing in. It expires in ten minutes.",
+        "Here is the code to confirm your ISB email. It expires in ten minutes.",
       bodyHtml: [
-        kicker("Sign in"),
-        heading("Finish signing in"),
+        kicker("Verify"),
+        heading("Confirm your ISB email"),
         para(addressed),
         para(
-          "Type the code below into the sign-in screen you already have open. It expires ten minutes from now, and it only works once.",
+          "Type the code below into the forum screen you already have open. It expires ten minutes from now, and it only works once.",
         ),
         `<table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="margin:20px 0 22px"><tr><td align="center" bgcolor="${C.surface}" style="background-color:${C.surface}; border:1px solid ${C.border}; padding:20px 12px"><span style="font-family:'SF Mono', Consolas, 'Courier New', monospace; font-size:28px; font-weight:700; line-height:1.2; letter-spacing:6px; color:${C.brand}">${code}</span></td></tr></table>`,
         para(
           "If the screen has since closed, go back to the forum in your browser, enter your email address again and request a fresh code.",
         ),
         fine(
-          "If you didn&rsquo;t ask to sign in, you can safely ignore this message &mdash; the code is useless on its own, and nobody can reach your account without it. We will never ask you to reply with this code, and nobody from the iVi community will ever ask you for it.",
+          "If you didn&rsquo;t ask for this, you can safely ignore this message &mdash; the code is useless on its own, and nobody can reach your account without it. We will never ask you to reply with this code, and nobody from the iVi community will ever ask you for it.",
         ),
       ].join("\n"),
     }),
-    text: `Finish signing in to the iVi Forum
+    text: `Confirm your ISB email for the iVi Forum
 
 ${addressedText}
 
-Type this code into the sign-in screen you already have open:
+Type this code into the forum screen you already have open:
 
     ${i.code}
 
 It expires ten minutes from now, and it only works once. If the screen has since closed, go back to the forum in your browser, enter your email address again and request a fresh code.
 
-If you didn't ask to sign in, you can safely ignore this message — the code is useless on its own, and nobody can reach your account without it. We will never ask you to reply with this code, and nobody from the iVi community will ever ask you for it.${textFooter()}`,
+If you didn't ask for this, you can safely ignore this message — the code is useless on its own, and nobody can reach your account without it. We will never ask you to reply with this code, and nobody from the iVi community will ever ask you for it.${textFooter()}`,
   };
 }
 

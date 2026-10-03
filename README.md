@@ -19,9 +19,12 @@ in the forum.
   chips, rich member profile pages.
 - **Forum** — anyone can start a topic; threads follow. Upvote/downvote topics and replies
   (one vote per member, toggle to remove, transactional counts). Sort by New / Top / Active.
-- **Passwordless sign-in** — enter your ISB email, get a 6-digit code (sent via
-  [Resend](https://resend.com)), and you're in. Email + password (NextAuth v5 Credentials,
-  bcrypt-hashed) stays as a fallback for existing accounts.
+- **Google sign-in, ISB-verified** — joining is four steps: (1) sign in with Google;
+  (2) prove you're ISB by entering a 6-digit code sent to your student (`@isb.edu`) or iVi
+  alumni (`@ivi.isb.edu`) address, over Gmail SMTP from the cohort mailbox; (3) onboarding;
+  (4) you're in. The Google account is the durable identity, so access survives the switch
+  from student to alumni email. Existing members verify their old ISB address once and keep
+  their profile.
 - **Email notifications** — members get an email when a new post matches their interest tags,
   when they're @-mentioned, when someone replies to their post, or when someone replies to
   their reply — plus a welcome email on joining. Every notification carries a one-click
@@ -33,9 +36,9 @@ in the forum.
 | Layer | Choice |
 |---|---|
 | Framework | Next.js 16 (App Router, standalone output), TypeScript, Tailwind v4 |
-| Auth | NextAuth v5 — email OTP + password Credentials providers, JWT sessions, edge `proxy.ts` route protection |
-| Database | Google Cloud Firestore (native mode) — collections `ivi_users`, `ivi_auth`, `ivi_topics` (+ `replies` subcollection), `ivi_votes` |
-| Email | [Resend](https://resend.com) REST API — sign-in codes + notification emails; dormant (and hidden in the UI) until `RESEND_API_KEY` is set |
+| Auth | NextAuth v5 — Google provider only, JWT sessions; ISB email verified by code and linked in `ivi_google`; edge `proxy.ts` route protection + canonical-host redirect |
+| Database | Google Cloud Firestore (native mode) — collections `ivi_users`, `ivi_auth`, `ivi_google`, `ivi_otp`, `ivi_topics` (+ `replies` subcollection), `ivi_votes` |
+| Email | Gmail SMTP via nodemailer (`SMTP_USER` + app password `SMTP_PASS`), [Resend](https://resend.com) REST as fallback — ISB verification codes + notification emails; dormant (and hidden in the UI) until one is configured |
 | LinkedIn scraping | Apify actor `apimaestro~linkedin-profile-batch-scraper-no-cookies-required` (~$0.01/profile, cost-capped per call) |
 | Hosting | Google Cloud Run (any container host works) |
 
@@ -49,7 +52,7 @@ Architecture, data model, and API contracts are documented in [SPEC.md](SPEC.md)
 - A GCP project with Firestore (native mode) enabled — or adapt `src/lib/firestore.ts` to your store
 - An [Apify](https://apify.com) account + API token (free tier works for small cohorts)
 - Optional: a [Resend](https://resend.com) account with a verified sending domain — without it the
-  app still runs, but OTP sign-in and notification emails stay dormant (password sign-in only)
+  app still runs, but ISB email verification and notification emails stay dormant
 
 ### Local development
 
@@ -131,7 +134,7 @@ container platform.
 
 ```
 src/
-  auth.ts               NextAuth v5 config (email OTP + password Credentials providers)
+  auth.ts               NextAuth v5 config (Google only; ISB check links ivi_google)
   proxy.ts              Next 16 edge proxy — JWT check on protected routes
   lib/
     types.ts            All shared interfaces (the data contract)

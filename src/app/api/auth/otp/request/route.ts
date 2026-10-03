@@ -1,16 +1,19 @@
 /**
- * POST /api/auth/otp/request — { name?, email }
+ * POST /api/auth/otp/request — { email }   (step 2: prove you are ISB)
  *   200 { ok: true }            code emailed
  *   400 { ok: false, error }    invalid email
+ *   401 { ok: false, error }    not signed in with Google
  *   403 { ok: false, error }    email not allowed (non-ISB)
  *   429 { ok: false, error }    rate limited
  *   502 { ok: false, error }    email send failed
- *   503 { ok: false, error }    OTP not configured (no Resend API key)
+ *   503 { ok: false, error }    OTP not configured (no SMTP or Resend credentials)
  *
- * Gates to ISB emails, mints a 6-digit code (hashed in Firestore), emails it.
- * Verification happens through the NextAuth "otp" provider.
+ * Only for a signed-in Google account that isn't linked yet. Gates to ISB
+ * emails, mints a 6-digit code (hashed in Firestore), emails it. The code is
+ * checked by POST /api/auth/isb/verify.
  */
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { isEmailAllowed } from "@/lib/access";
 import { startOtp } from "@/lib/firestore";
 import { sendOtpEmail, emailConfigured } from "@/lib/email";
@@ -23,7 +26,14 @@ function bad(status: number, error: string) {
 
 export async function POST(req: Request) {
   if (!emailConfigured) {
-    return bad(503, "Email sign-in isn't set up yet.");
+    return bad(503, "Email verification isn't set up yet.");
+  }
+  const session = await auth();
+  if (!session?.user?.googleSub) {
+    return bad(401, "Sign in with Google first.");
+  }
+  if (session.user.id) {
+    return bad(400, "You're already verified.");
   }
 
   let body: unknown;
@@ -33,15 +43,18 @@ export async function POST(req: Request) {
     return bad(400, "Request body must be JSON.");
   }
 
-  const { name, email } = (body ?? {}) as Record<string, unknown>;
+  const { email } = (body ?? {}) as Record<string, unknown>;
   const emailStr = typeof email === "string" ? email.trim().toLowerCase() : "";
-  const nameStr = typeof name === "string" ? name.trim().slice(0, 80) : "";
+  const nameStr = (session.user.name ?? "").trim().slice(0, 80);
 
   if (!EMAIL_RE.test(emailStr)) {
     return bad(400, "Please enter a valid email address.");
   }
   if (!isEmailAllowed(emailStr)) {
-    return bad(403, "Only ISB (@isb.edu) email addresses can join right now.");
+    return bad(
+      403,
+      "Use your ISB email: your student address (@isb.edu) or your iVi alumni address (@ivi.isb.edu).",
+    );
   }
 
   const res = await startOtp({ email: emailStr, name: nameStr });

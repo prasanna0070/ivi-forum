@@ -8,8 +8,9 @@
  * If BOTH are empty/unset, the gate is OPEN (any email) — the original behaviour.
  * A configured domain also admits its subdomains, so a single `isb.edu` entry
  * covers ISB subdomains like `@ivi.isb.edu` (alumni IDs) too.
- * Used by the password signup route and the OTP request route, so both entry
- * paths enforce the same policy (no back door).
+ * Used by the ISB-email code request (step 2 of joining) and by the Google
+ * sign-in callback (a Google account whose own address passes is linked
+ * directly), so both paths enforce the same policy (no back door).
  *
  * Pure + dependency-free so it's safe to import anywhere.
  */

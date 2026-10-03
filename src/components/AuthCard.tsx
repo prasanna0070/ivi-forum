@@ -1,497 +1,60 @@
 "use client";
 
 /**
- * Sign-in card for the landing page.
- *
- * When email OTP is configured (`otpEnabled`), the verified passwordless flow is
- * primary: enter ISB email → get a 6-digit code → verify → in. Email + password
- * remains available as a fallback for existing accounts. When OTP isn't
- * configured, only the password tabs show.
- *
- * Post-auth navigation is a hard `window.location.assign` on purpose — a soft
- * router.push raced the auth proxy redirect and wedged the client (see git
- * history). A real navigation loads the member area cleanly every time.
+ * Sign-in card for the landing page — step 1 of joining: sign in with Google.
+ * Google is the only way in; step 2 (proving you're ISB) is <VerifyIsbCard>.
  */
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import IviArrow from "@/components/IviArrow";
-
-type Tab = "signin" | "signup";
-type Mode = "otp" | "password";
-type OtpStep = "email" | "code";
 
 function Spinner() {
   return (
     <span
       aria-hidden="true"
-      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand"
     />
   );
 }
 
-const inputClass =
-  "w-full rounded-input border border-border bg-white px-3 py-2.5 text-base text-ink placeholder:text-placeholder focus:border-heading focus:[outline:2px_solid_rgba(30,45,140,0.3)] focus:[outline-offset:-2px]";
-const labelClass = "text-sm font-semibold text-ink";
-const submitClass =
-  "group mt-1 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-brand bg-brand px-6 text-base font-semibold text-white transition-colors hover:bg-brand-light active:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60";
-
-export default function AuthCard({
-  otpEnabled = false,
-}: {
-  otpEnabled?: boolean;
-}) {
-  // OTP (email code) is the PRIMARY path when email is configured: verified
-  // sign-in that proves ISB-mailbox ownership. This now reaches ISB inboxes —
-  // the earlier Microsoft-365 quarantine was caused by the code sitting in the
-  // subject line (fixed: the OTP subject is digit-free). Password stays as the
-  // fallback for existing accounts / any inbox that still filters the code.
-  const [mode, setMode] = useState<Mode>(otpEnabled ? "otp" : "password");
-
-  // shared
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // OTP
-  const [otpTab, setOtpTab] = useState<Tab>("signin");
-  const [otpStep, setOtpStep] = useState<OtpStep>("email");
-  const [code, setCode] = useState("");
-  const [sentTo, setSentTo] = useState("");
-
-  // password
-  const [tab, setTab] = useState<Tab>("signin");
-  const [password, setPassword] = useState("");
-
-  function resetMsgs() {
-    setError(null);
-  }
-
-  // ── OTP ──────────────────────────────────────────────────────────────────
-  async function requestCode(e?: React.FormEvent) {
-    e?.preventDefault();
-    resetMsgs();
-    // On the Sign-up tab a name is required (it's what the new account is
-    // created with); the Sign-in tab never asks for it.
-    if (otpTab === "signup" && !name.trim()) {
-      setError("Please enter your name.");
-      return;
-    }
-    setPending(true);
-    try {
-      const res = await fetch("/api/auth/otp/request", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, email }),
-      });
-      const data = (await res.json().catch(() => null)) as
-        | { ok?: boolean; error?: string }
-        | null;
-      if (res.ok && data?.ok) {
-        setSentTo(email.trim().toLowerCase());
-        setOtpStep("code");
-        setCode("");
-      } else {
-        setError(data?.error ?? "Could not send a code — please try again.");
-      }
-    } catch {
-      setError("Something went wrong — please try again.");
-    } finally {
-      setPending(false);
-    }
-  }
-
-  async function verifyCode(e: React.FormEvent) {
-    e.preventDefault();
-    resetMsgs();
-    setPending(true);
-    try {
-      const res = await signIn("otp", {
-        email: sentTo,
-        code: code.trim(),
-        redirect: false,
-      });
-      if (res?.error) {
-        setError("That code is invalid or expired — check it or resend.");
-        setPending(false);
-        return;
-      }
-      window.location.assign("/directory");
-    } catch {
-      setError("Something went wrong — please try again.");
-      setPending(false);
-    }
-  }
-
-  // ── password (fallback) ────────────────────────────────────────────────────
-  async function handleSignIn(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    resetMsgs();
-    setPending(true);
-    try {
-      const res = await signIn("credentials", { email, password, redirect: false });
-      if (res?.error) {
-        setError("Wrong email or password.");
-        setPending(false);
-        return;
-      }
-      window.location.assign("/directory");
-    } catch {
-      setError("Something went wrong — please try again.");
-      setPending(false);
-    }
-  }
-
-  async function handleSignUp(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    resetMsgs();
-    setPending(true);
-    try {
-      const res = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-      });
-      if (res.status === 409) {
-        setError("An account with this email already exists — sign in instead.");
-        setPending(false);
-        return;
-      }
-      if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(data?.error ?? "Could not create your account — please try again.");
-        setPending(false);
-        return;
-      }
-      const login = await signIn("credentials", { email, password, redirect: false });
-      if (login?.error) {
-        setTab("signin");
-        setError("Account created — please sign in.");
-        setPending(false);
-        return;
-      }
-      window.location.assign("/onboarding");
-    } catch {
-      setError("Something went wrong — please try again.");
-      setPending(false);
-    }
-  }
-
-  const cardClass =
-    "w-full max-w-md rounded-card border border-border bg-white p-6 shadow-card sm:p-8";
-
-  // ── OTP mode ───────────────────────────────────────────────────────────────
-  if (otpEnabled && mode === "otp") {
-    const isSignup = otpTab === "signup";
-    return (
-      <div className={cardClass}>
-        {otpStep === "email" ? (
-          <>
-            {/* Sign in / Sign up chooser */}
-            <div className="mb-6 flex border-b border-border">
-              {(
-                [
-                  ["signin", "Sign in"],
-                  ["signup", "Sign up"],
-                ] as const
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => {
-                    setOtpTab(key);
-                    resetMsgs();
-                  }}
-                  aria-pressed={otpTab === key}
-                  className={`relative -mb-px flex-1 px-3 py-3 text-sm font-semibold transition-colors ${
-                    otpTab === key ? "text-brand" : "text-muted hover:text-brand"
-                  }`}
-                >
-                  {label}
-                  {otpTab === key && (
-                    <span className="absolute inset-x-0 bottom-0 h-[3px] bg-brand" />
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <form onSubmit={requestCode} className="flex flex-col gap-4">
-              <div>
-                <h2 className="font-serif text-xl font-medium text-heading">
-                  {isSignup ? "Create your account" : "Welcome back"}
-                </h2>
-                <p className="mt-1 text-sm text-muted">
-                  {isSignup
-                    ? "Enter your name and ISB email — we'll send a 6-digit code to verify it. Membership is limited to I-Venture @ ISB (@isb.edu)."
-                    : "Enter your ISB email and we'll send a 6-digit code to sign you in."}
-                </p>
-              </div>
-              {isSignup && (
-                <label className={labelClass}>
-                  Name
-                  <input
-                    type="text"
-                    required
-                    maxLength={80}
-                    autoComplete="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your full name"
-                    className={`mt-1.5 ${inputClass}`}
-                  />
-                </label>
-              )}
-              <label className={labelClass}>
-                ISB email
-                <input
-                  type="email"
-                  required
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@isb.edu"
-                  className={`mt-1.5 ${inputClass}`}
-                />
-              </label>
-              {error && <p className="text-sm text-danger">{error}</p>}
-              <button type="submit" disabled={pending} className={submitClass}>
-                {pending && <Spinner />}
-                {pending ? "Sending code…" : "Email me a code"}
-                {!pending && (
-                  <IviArrow
-                    dir="right"
-                    size={20}
-                    className="transition-transform duration-200 group-hover:translate-x-2"
-                  />
-                )}
-              </button>
-            </form>
-          </>
-        ) : (
-          <form onSubmit={verifyCode} className="flex flex-col gap-4">
-            <div>
-              <h2 className="font-serif text-xl font-medium text-heading">
-                Enter your code
-              </h2>
-              <p className="mt-1 text-sm text-muted">
-                We sent a 6-digit code to{" "}
-                <span className="font-semibold text-ink">{sentTo}</span>.
-              </p>
-              <p className="mt-2 rounded-input border border-border bg-surface px-3 py-2 text-xs leading-relaxed text-muted">
-                Don&apos;t see it? Check your{" "}
-                <span className="font-semibold text-ink">Spam / Junk</span> folder
-                — ISB mail often files a first-time sender there. Mark it{" "}
-                <span className="font-semibold text-ink">Not junk</span> so future
-                codes land in your inbox.
-              </p>
-            </div>
-            <label className={labelClass}>
-              6-digit code
-              <input
-                type="text"
-                required
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9]*"
-                maxLength={6}
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                placeholder="123456"
-                className={`mt-1.5 text-center text-2xl tracking-[0.4em] ${inputClass}`}
-                autoFocus
-              />
-            </label>
-            {error && <p className="text-sm text-danger">{error}</p>}
-            <button type="submit" disabled={pending} className={submitClass}>
-              {pending && <Spinner />}
-              {pending ? "Verifying…" : "Verify & sign in"}
-              {!pending && (
-                <IviArrow
-                  dir="right"
-                  size={20}
-                  className="transition-transform duration-200 group-hover:translate-x-2"
-                />
-              )}
-            </button>
-            <div className="flex items-center justify-between text-sm">
-              <button
-                type="button"
-                onClick={() => {
-                  setOtpStep("email");
-                  resetMsgs();
-                }}
-                className="text-muted underline hover:text-brand-light"
-              >
-                Change email
-              </button>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => requestCode()}
-                className="text-muted underline hover:text-brand-light disabled:opacity-60"
-              >
-                Resend code
-              </button>
-            </div>
-          </form>
-        )}
-
-        <p className="mt-6 border-t border-border pt-4 text-center text-sm text-muted">
-          Have a password?{" "}
-          <button
-            type="button"
-            onClick={() => {
-              setMode("password");
-              resetMsgs();
-            }}
-            className="font-semibold text-brand underline hover:text-brand-light"
-          >
-            Sign in with password
-          </button>
-        </p>
-      </div>
-    );
-  }
-
-  // ── Password mode ──────────────────────────────────────────────────────────
+function GoogleMark() {
   return (
-    <div className={cardClass}>
-      <div className="mb-6 flex border-b border-border">
-        {(
-          [
-            ["signin", "Sign in"],
-            ["signup", "Sign up"],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => {
-              setTab(key);
-              resetMsgs();
-            }}
-            aria-pressed={tab === key}
-            className={`relative -mb-px flex-1 px-3 py-3 text-sm font-semibold transition-colors ${
-              tab === key ? "text-brand" : "text-muted hover:text-brand"
-            }`}
-          >
-            {label}
-            {tab === key && (
-              <span className="absolute inset-x-0 bottom-0 h-[3px] bg-brand" />
-            )}
-          </button>
-        ))}
-      </div>
+    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 48 48">
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+      <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" />
+    </svg>
+  );
+}
 
-      {tab === "signup" ? (
-        <form onSubmit={handleSignUp} className="flex flex-col gap-4">
-          <label className={labelClass}>
-            Name
-            <input
-              type="text"
-              required
-              maxLength={80}
-              autoComplete="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your full name"
-              className={`mt-1.5 ${inputClass}`}
-            />
-          </label>
-          <label className={labelClass}>
-            Email
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@isb.edu"
-              className={`mt-1.5 ${inputClass}`}
-            />
-          </label>
-          <label className={labelClass}>
-            Password
-            <input
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
-              className={`mt-1.5 ${inputClass}`}
-            />
-          </label>
-          {error && <p className="text-sm text-danger">{error}</p>}
-          <button type="submit" disabled={pending} className={submitClass}>
-            {pending && <Spinner />}
-            {pending ? "Creating your account…" : "Create account"}
-            {!pending && (
-              <IviArrow
-                dir="right"
-                size={20}
-                className="transition-transform duration-200 group-hover:translate-x-2"
-              />
-            )}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={handleSignIn} className="flex flex-col gap-4">
-          <label className={labelClass}>
-            Email
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@isb.edu"
-              className={`mt-1.5 ${inputClass}`}
-            />
-          </label>
-          <label className={labelClass}>
-            Password
-            <input
-              type="password"
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Your password"
-              className={`mt-1.5 ${inputClass}`}
-            />
-          </label>
-          {error && <p className="text-sm text-danger">{error}</p>}
-          <button type="submit" disabled={pending} className={submitClass}>
-            {pending && <Spinner />}
-            {pending ? "Signing in…" : "Sign in"}
-            {!pending && (
-              <IviArrow
-                dir="right"
-                size={20}
-                className="transition-transform duration-200 group-hover:translate-x-2"
-              />
-            )}
-          </button>
-        </form>
-      )}
+export default function AuthCard() {
+  const [pending, setPending] = useState(false);
 
-      {otpEnabled && (
-        <p className="mt-6 border-t border-border pt-4 text-center text-sm text-muted">
-          <button
-            type="button"
-            onClick={() => {
-              setMode("otp");
-              setOtpStep("email");
-              resetMsgs();
-            }}
-            className="font-semibold text-brand underline hover:text-brand-light"
-          >
-            Sign in with an email code instead
-          </button>
-        </p>
-      )}
+  return (
+    <div className="w-full max-w-md rounded-card border border-border bg-white p-6 shadow-card sm:p-8">
+      <h2 className="font-serif text-xl font-medium text-heading">Sign in</h2>
+      <p className="mt-1 text-sm text-muted">
+        Use the Google account you&apos;ll keep after ISB. New here? Next we&apos;ll
+        check you&apos;re part of I-Venture @ ISB with a code sent to your ISB email.
+      </p>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => {
+          setPending(true);
+          void signIn("google", { redirectTo: "/" });
+        }}
+        className="mt-6 inline-flex min-h-[48px] w-full items-center justify-center gap-3 rounded-brand border border-border bg-white px-6 text-base font-semibold text-ink transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {pending ? <Spinner /> : <GoogleMark />}
+        {pending ? "Opening Google…" : "Continue with Google"}
+      </button>
+      <ol className="mt-6 space-y-1 border-t border-border pt-4 text-sm text-muted">
+        <li>1. Sign in with Google</li>
+        <li>2. Verify your ISB email (@isb.edu or alumni @ivi.isb.edu)</li>
+        <li>3. Set up your profile</li>
+        <li>4. You&apos;re in</li>
+      </ol>
     </div>
   );
 }
