@@ -55,9 +55,12 @@ function canonicalRedirect(req: NextRequest): NextResponse | null {
   } catch {
     return null;
   }
-  // Behind Cloud Run the request URL's host is the public hostname.
+  // Only the other PUBLIC Cloud Run hostname is redirected. Internal requests
+  // (e.g. the next/image optimizer fetching /brand/*.png from this same server
+  // under a container-local host) must pass through untouched, or the
+  // optimizer receives a redirect instead of the image and every logo breaks.
   const host = req.headers.get("host") ?? req.nextUrl.host;
-  if (!host || host === canonical.host || host.startsWith("localhost")) return null;
+  if (!host || host === canonical.host || !host.endsWith(".run.app")) return null;
   const target = new URL(req.nextUrl.pathname + req.nextUrl.search, canonical.origin);
   return NextResponse.redirect(target, 308);
 }
@@ -79,5 +82,7 @@ export async function proxy(req: NextRequest) {
 export const config = {
   // Every page and API route (for the canonical-host redirect); static build
   // assets are skipped. Protection is decided by PROTECTED above.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // /brand/ is the public logos + photos folder. Uploaded images under
+  // /api/uploads stay matched: they rely on the session check below.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|brand/).*)"],
 };
