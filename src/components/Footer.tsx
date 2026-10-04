@@ -1,6 +1,6 @@
 /**
  * Site footer — I-Venture dark-slate recipe: #2e3b42 column band + #5d6f7a
- * bottom strip, white lockup with the peach underline intact. Links are the
+ * bottom strip, white lockup (its I-Venture underline is part of the logo). Links are the
  * app's real routes + the source repo (functionality unchanged).
  */
 import Image from "next/image";
@@ -26,7 +26,6 @@ export default function Footer() {
               height={389}
               className="h-9 w-auto"
             />
-            <span aria-hidden className="mt-3 block h-[2px] w-24 bg-accent" />
             <p className="mt-5 max-w-xs text-[15px] leading-relaxed text-white/85">
               Every cohort. One room. The member directory and forum for
               I-Venture @ ISB founders — built by the community.
