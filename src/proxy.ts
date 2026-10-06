@@ -2,11 +2,12 @@
  * Canonical host + route protection (Next 16 renamed `middleware.ts` →
  * `proxy.ts`).
  *
- * Canonical host: Cloud Run answers on two hostnames (the readable
- * `ivi-forum-<project-number>.asia-south1.run.app` and the legacy hashed
+ * Canonical host: the community answers on several public hostnames (the
+ * custom domain and its `www.`, plus Cloud Run's readable
+ * `ivi-forum-<project-number>.asia-south1.run.app` and legacy hashed
  * `ivi-forum-<hash>-el.a.run.app`). Google sign-in only works on the host in
- * AUTH_URL (its callback and cookies live there), so every request on any
- * other host is redirected to it, keeping the path.
+ * AUTH_URL (its callback and cookies live there), so requests on the other
+ * public hostnames are redirected to it, keeping the path.
  *
  * Optimistic check only: verifies the NextAuth JWT session cookie with
  * `getToken` (jose — edge-safe, no Node/Firestore deps). Every protected API
@@ -55,12 +56,15 @@ function canonicalRedirect(req: NextRequest): NextResponse | null {
   } catch {
     return null;
   }
-  // Only the other PUBLIC Cloud Run hostname is redirected. Internal requests
-  // (e.g. the next/image optimizer fetching /brand/*.png from this same server
-  // under a container-local host) must pass through untouched, or the
-  // optimizer receives a redirect instead of the image and every logo breaks.
-  const host = req.headers.get("host") ?? req.nextUrl.host;
-  if (!host || host === canonical.host || !host.endsWith(".run.app")) return null;
+  // Only known PUBLIC aliases are redirected: Cloud Run's *.run.app hostnames
+  // and www.<canonical>. Internal requests (e.g. the next/image optimizer
+  // fetching /brand/*.png from this same server under a container-local host)
+  // must pass through untouched, or the optimizer receives a redirect instead
+  // of the image and every logo breaks.
+  const host = (req.headers.get("host") ?? req.nextUrl.host).toLowerCase();
+  if (!host || host === canonical.host) return null;
+  const isAlias = host.endsWith(".run.app") || host === `www.${canonical.host}`;
+  if (!isAlias) return null;
   const target = new URL(req.nextUrl.pathname + req.nextUrl.search, canonical.origin);
   return NextResponse.redirect(target, 308);
 }
