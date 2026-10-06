@@ -8,10 +8,11 @@ PROJECT="${GCP_PROJECT:-project-55741ec9-449d-403c-9e5}"
 REGION="${REGION:-asia-south1}"
 SERVICE="ivi-forum"
 RUNTIME_SA="ivi-forum-run@${PROJECT}.iam.gserviceaccount.com"
-# Canonical URL: Cloud Run's readable per-project hostname (no random hash).
-# The legacy hashed hostname still reaches the service and src/proxy.ts
-# redirects it here. Google sign-in's callback is registered on this URL.
-APP_URL="${APP_URL:-https://ivi-forum-891711670395.asia-south1.run.app}"
+# Canonical URL: the community's own domain, served through the global HTTPS
+# load balancer (scripts/add-isbcommunity-domain.sh). www and both Cloud Run
+# hostnames redirect here (src/proxy.ts). Google sign-in's callback is
+# registered on this URL.
+APP_URL="${APP_URL:-https://isbcommunity.com}"
 
 # Membership gate: only ISB emails may join, plus an allowlist for existing
 # members who signed up with a personal address.
