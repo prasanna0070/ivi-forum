@@ -115,7 +115,7 @@ export default function Footer() {
       <div className="bg-footer-strip text-white/90">
         <div className="pb-safe px-safe mx-auto flex max-w-6xl flex-col items-center justify-between gap-1 px-4 py-4 text-[13px] sm:flex-row sm:px-6">
           <p>© {year} iVi Forum</p>
-          <p>Built by the iVi community — not an official ISB product</p>
+          <p>Built by the iVi community</p>
         </div>
       </div>
     </footer>
