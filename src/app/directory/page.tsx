@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import DirectoryGrid from '@/components/directory/DirectoryGrid';
 import { listMembers } from '@/lib/firestore';
 import { requireMember } from '@/lib/session';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Directory · iVi Forum',
@@ -26,6 +27,15 @@ export default async function DirectoryPage() {
           </h1>
           <p className="mt-2 text-sm text-muted sm:text-base">
             Welcome back, {firstName} — founders and builders across all four iVi cohorts.
+          </p>
+          <p className="mt-1 text-sm text-muted">
+            Missing something you need here?{' '}
+            <Link
+              href="/requests"
+              className="font-semibold text-brand underline underline-offset-2 hover:text-brand-light"
+            >
+              Request a feature
+            </Link>
           </p>
         </header>
 

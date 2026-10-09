@@ -37,6 +37,7 @@ async function hasSession(req: NextRequest): Promise<boolean> {
 const PROTECTED = [
   "/directory",
   "/forum",
+  "/requests",
   "/onboarding",
   "/profile",
   "/api/scrape",
@@ -44,6 +45,7 @@ const PROTECTED = [
   "/api/members",
   "/api/topics",
   "/api/votes",
+  "/api/requests",
   "/api/uploads",
 ];
 

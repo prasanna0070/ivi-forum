@@ -1,12 +1,16 @@
 /**
  * POST /api/topics — create a forum topic.
  *
- * Body: { title: string (1..200), body?: string (0..10000), tags?: string[] (≤5 slugs) }
+ * Body: { title: string (1..200), body?: string (0..10000), tags?: string[] (≤5 slugs),
+ *         kind?: 'feature' }
+ * kind 'feature' creates a feature request for the /requests tab: no tags (so
+ * it never fans out to interest followers), status 'open', and the admins are
+ * emailed.
  * → 200 { ok: true, id } | 400 { ok:false, error } | 401 | 403 | 500
  */
 import { NextResponse } from 'next/server';
 import { createTopic, getMember } from '@/lib/firestore';
-import { notifyTopicCreated } from '@/lib/notifications';
+import { notifyAdminsOfFeatureRequest, notifyTopicCreated } from '@/lib/notifications';
 import { requireUserApi } from '@/lib/session';
 import { sanitizeTags } from '@/components/forum/tags';
 import { extractMentionUids, sanitizeMentionUids, MAX_MENTIONS } from '@/components/forum/mentions';
@@ -49,7 +53,8 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  const tags = sanitizeTags(payload.tags);
+  const kind = payload.kind === 'feature' ? 'feature' : 'discussion';
+  const tags = kind === 'feature' ? [] : sanitizeTags(payload.tags);
   const images = sanitizeImagePaths(payload.images, user.id);
 
   // Mentions: the body is the source of truth (anti-injection — we never store a
@@ -80,10 +85,12 @@ export async function POST(request: Request) {
       authorUid: user.id,
       authorName: member.name,
       authorPhotoUrl: member.photoUrl,
+      kind,
     });
     // Awaited inline (not fire-and-forget) because Cloud Run throttles CPU after
     // the response is sent; notifyTopicCreated never throws, so the 200 is safe.
     await notifyTopicCreated(topic);
+    if (kind === 'feature') await notifyAdminsOfFeatureRequest(topic);
 
     return NextResponse.json({ ok: true, id: topic.id });
   } catch (err) {

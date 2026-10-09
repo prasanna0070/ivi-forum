@@ -1,6 +1,6 @@
 /**
  * Sticky app header (server component — uses auth()).
- * Signed in: Directory / Forum nav + avatar menu / mobile overlay (client island).
+ * Signed in: Directory / Forum / Feature requests nav + avatar menu / mobile overlay (client island).
  * Signed out: logo only — the landing page hosts the auth card.
  * 56px bar on mobile, 72px on desktop; white with the I-Venture nav shadow.
  */
@@ -13,6 +13,7 @@ import HeaderUserMenu from "@/components/HeaderUserMenu";
 const NAV_ITEMS = [
   { href: "/directory", label: "Directory" },
   { href: "/forum", label: "Forum" },
+  { href: "/requests", label: "Feature requests" },
 ];
 
 export default async function Header() {

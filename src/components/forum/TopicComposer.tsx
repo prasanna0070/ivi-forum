@@ -5,6 +5,9 @@
  * Full-screen sheet on mobile (safe-area padded, sticky action bar); centered
  * modal on desktop. Title, plain-text body, tag chips (comma/Enter, ≤5). On
  * success navigates to the new thread.
+ *
+ * kind="feature" turns it into "Request a feature" for the /requests tab:
+ * same editor without tags, request wording, and it lands on /requests/<id>.
  */
 import { useRouter } from 'next/navigation';
 import {
@@ -25,7 +28,12 @@ import IviArrow from '@/components/IviArrow';
 const inputClass =
   'w-full rounded-input border border-border bg-white px-3 py-2.5 text-base text-ink placeholder:text-placeholder transition-colors focus:border-heading focus:outline-2 focus:-outline-offset-2 focus:outline-heading/30';
 
-export default function TopicComposer() {
+export default function TopicComposer({
+  kind = 'discussion',
+}: {
+  kind?: 'discussion' | 'feature';
+} = {}) {
+  const isFeature = kind === 'feature';
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
@@ -92,7 +100,14 @@ export default function TopicComposer() {
       const res = await fetch('/api/topics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: trimmedTitle, body: body.trim(), tags: finalTags, images, mentionUids }),
+        body: JSON.stringify({
+          title: trimmedTitle,
+          body: body.trim(),
+          tags: isFeature ? [] : finalTags,
+          images,
+          mentionUids,
+          ...(isFeature ? { kind: 'feature' } : {}),
+        }),
       });
       const data: { ok?: boolean; id?: string; error?: string } | null = await res
         .json()
@@ -100,11 +115,17 @@ export default function TopicComposer() {
       if (!res.ok || !data?.ok || !data.id) {
         throw new Error(data?.error ?? 'failed');
       }
-      router.push(`/forum/${data.id}`);
+      router.push(isFeature ? `/requests/${data.id}` : `/forum/${data.id}`);
       router.refresh();
       // Keep `pending` true — we're navigating away.
     } catch (err) {
-      setError(err instanceof Error && err.message !== 'failed' ? err.message : "Couldn't post your topic — try again.");
+      setError(
+        err instanceof Error && err.message !== 'failed'
+          ? err.message
+          : isFeature
+            ? "Couldn't submit your request — try again."
+            : "Couldn't post your topic — try again.",
+      );
       setPending(false);
     }
   }
@@ -116,7 +137,7 @@ export default function TopicComposer() {
         onClick={() => setOpen(true)}
         className="group inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-brand bg-brand px-6 py-3 text-base font-semibold text-white transition-all hover:bg-brand-light active:bg-brand-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-heading/40 sm:w-auto"
       >
-        Start a topic
+        {isFeature ? 'Request a feature' : 'Start a topic'}
         <IviArrow dir="right"
           strokeWidth={2}
           className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-2"
@@ -141,7 +162,7 @@ export default function TopicComposer() {
             {/* Header — stays in view while the body scrolls */}
             <div className="flex items-center justify-between gap-4 border-b border-border px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] md:px-6 md:pt-4">
               <h2 id="topic-composer-heading" className="font-serif text-xl font-medium text-heading">
-                Start a topic
+                {isFeature ? 'Request a feature' : 'Start a topic'}
               </h2>
               <button
                 type="button"
@@ -168,12 +189,15 @@ export default function TopicComposer() {
                 onChange={(event) => setTitle(event.target.value)}
                 maxLength={200}
                 required
-                placeholder="What do you want to discuss?"
+                placeholder={isFeature ? 'What should the community add or improve?' : 'What do you want to discuss?'}
                 className={`mt-1.5 ${inputClass}`}
               />
 
               <label htmlFor="topic-body" className="mt-4 block text-sm font-semibold text-ink">
-                Body <span className="font-normal text-muted">— plain text; use @ to mention</span>
+                {isFeature ? 'Details' : 'Body'}{' '}
+                <span className="font-normal text-muted">
+                  {isFeature ? '— what would it help you do?' : '— plain text; use @ to mention'}
+                </span>
               </label>
               <MentionTextarea
                 id="topic-body"
@@ -182,10 +206,16 @@ export default function TopicComposer() {
                 onMentionsChange={setMentionUids}
                 maxLength={10000}
                 rows={6}
-                placeholder="Add context, links, questions… @mention a member"
+                placeholder={
+                  isFeature
+                    ? 'The problem it solves for you, and how you imagine it working…'
+                    : 'Add context, links, questions… @mention a member'
+                }
                 className="mt-1.5 resize-y"
               />
 
+              {!isFeature && (
+                <>
               <label className="mt-4 block text-sm font-semibold text-ink">
                 Tags <span className="font-normal text-muted">— up to {MAX_TAGS}; tap to add</span>
               </label>
@@ -225,6 +255,9 @@ export default function TopicComposer() {
                 />
               </div>
 
+                </>
+              )}
+
               <div className="mt-4 block text-sm font-semibold text-ink">
                 Images <span className="font-normal text-muted">— up to {MAX_IMAGES}, 5 MB each</span>
               </div>
@@ -254,7 +287,13 @@ export default function TopicComposer() {
                 disabled={pending || title.trim().length === 0}
                 className="group inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-brand bg-brand px-6 py-3 text-base font-semibold text-white transition-all hover:bg-brand-light active:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50 md:w-auto"
               >
-                {pending ? 'Posting…' : 'Post topic'}
+                {pending
+                  ? isFeature
+                    ? 'Submitting…'
+                    : 'Posting…'
+                  : isFeature
+                    ? 'Submit request'
+                    : 'Post topic'}
                 {!pending && (
                   <IviArrow dir="right"
                     strokeWidth={2}

@@ -114,6 +114,15 @@ export interface MemberProfile {
   updatedAt: number;
 }
 
+/**
+ * What a topic is: an ordinary forum discussion, or a feature request for the
+ * community platform itself (listed on /requests, never in the forum list).
+ */
+export type TopicKind = 'discussion' | 'feature';
+
+/** Where a feature request stands; set by admins. */
+export type FeatureStatus = 'open' | 'planned' | 'in_progress' | 'shipped' | 'declined';
+
 /** `ivi_topics/{topicId}` — topicId = Firestore auto ID. */
 export interface Topic {
   id: string;
@@ -131,6 +140,10 @@ export interface Topic {
   upCount: number;
   downCount: number;
   score: number; // upCount - downCount (kept transactionally)
+  /** Absent on topics created before feature requests existed = 'discussion'. */
+  kind?: TopicKind;
+  /** Feature requests only; 'open' when created. */
+  status?: FeatureStatus;
 }
 
 /** `ivi_topics/{topicId}/replies/{replyId}`. */

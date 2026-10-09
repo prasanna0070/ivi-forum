@@ -47,6 +47,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/requests" className={linkClass}>
+                  Feature requests
+                </Link>
+              </li>
+              <li>
                 <Link href="/privacy" className={linkClass}>
                   Privacy
                 </Link>

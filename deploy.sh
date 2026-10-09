@@ -27,6 +27,11 @@ SECRETS="AUTH_SECRET=ivi-forum-auth-secret:latest,APIFY_API_TOKEN=ivi-forum-apif
 # Google sign-in (the only way in): OAuth client "iVi Forum" in this project,
 # redirect URI ${APP_URL}/api/auth/callback/google.
 SECRETS="${SECRETS},AUTH_GOOGLE_ID=ivi-forum-google-id:latest,AUTH_GOOGLE_SECRET=ivi-forum-google-secret:latest"
+# Community admins (member uids, comma-separated): may set feature-request
+# status and get an email for each new request. Kept out of the repo.
+if gcloud secrets describe ivi-forum-admin-uids --project="$PROJECT" >/dev/null 2>&1; then
+  SECRETS="${SECRETS},ADMIN_UIDS=ivi-forum-admin-uids:latest"
+fi
 ENV_VARS="GCP_PROJECT=${PROJECT},AUTH_URL=${APP_URL},AUTH_TRUST_HOST=true"
 ENV_VARS="${ENV_VARS},UPLOADS_BUCKET=${UPLOADS_BUCKET}"
 ENV_VARS="${ENV_VARS},APIFY_LINKEDIN_PROFILE_ACTOR=apimaestro~linkedin-profile-batch-scraper-no-cookies-required"

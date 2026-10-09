@@ -11,11 +11,13 @@ import { hash, compare } from 'bcryptjs';
 import { Firestore } from '@google-cloud/firestore';
 import type {
   AuthRecord,
+  FeatureStatus,
   GoogleLink,
   MemberProfile,
   OtpRecord,
   Reply,
   Topic,
+  TopicKind,
   Vote,
   VoteResult,
   VoteTargetType,
@@ -341,10 +343,45 @@ export async function getTopic(id: string): Promise<Topic | null> {
   return snap.exists ? ({ ...(snap.data() as Topic), id: snap.id }) : null;
 }
 
-/** Topic list for a forum tab. Single-field desc order → auto-indexed. */
-export async function listTopics(sort: TopicSort, limit = 50): Promise<Topic[]> {
-  const snap = await db.collection(TOPICS).orderBy(TOPIC_ORDER_FIELD[sort], 'desc').limit(limit).get();
-  return snap.docs.map((d) => ({ ...(d.data() as Topic), id: d.id }));
+/**
+ * Topic list for a tab. Discussions (the forum) and feature requests (the
+ * /requests tab) share the collection, so each list filters by kind; topics
+ * created before kinds existed have none and count as discussions.
+ *
+ * Discussions: single-field desc order (auto-indexed), over-fetched so the
+ *   feature requests filtered out never shrink the page.
+ * Features: one equality filter (auto-indexed), sorted in memory — the set is
+ *   small and this needs no composite index on a fresh project.
+ */
+export async function listTopics(
+  sort: TopicSort,
+  limit = 50,
+  kind: TopicKind = 'discussion',
+): Promise<Topic[]> {
+  const field = TOPIC_ORDER_FIELD[sort];
+  if (kind === 'feature') {
+    const snap = await db.collection(TOPICS).where('kind', '==', 'feature').get();
+    return snap.docs
+      .map((d) => ({ ...(d.data() as Topic), id: d.id }))
+      .sort((a, b) => Number(b[field]) - Number(a[field]) || b.createdAt - a.createdAt)
+      .slice(0, limit);
+  }
+  const snap = await db.collection(TOPICS).orderBy(field, 'desc').limit(limit * 2).get();
+  return snap.docs
+    .map((d) => ({ ...(d.data() as Topic), id: d.id }))
+    .filter((t) => t.kind !== 'feature')
+    .slice(0, limit);
+}
+
+/** Set a feature request's status. Returns false if the topic isn't a feature request. */
+export async function setFeatureStatus(id: string, status: FeatureStatus): Promise<boolean> {
+  const ref = db.collection(TOPICS).doc(id);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists || (snap.data() as Topic).kind !== 'feature') return false;
+    tx.update(ref, { status, statusUpdatedAt: Date.now() });
+    return true;
+  });
 }
 
 /** Create a topic. Caller validates lengths/tags per SPEC. */
@@ -357,6 +394,7 @@ export async function createTopic(input: {
   authorUid: string;
   authorName: string;
   authorPhotoUrl: string | null;
+  kind?: TopicKind;
 }): Promise<Topic> {
   const ref = db.collection(TOPICS).doc();
   const now = Date.now();
@@ -376,6 +414,8 @@ export async function createTopic(input: {
     upCount: 0,
     downCount: 0,
     score: 0,
+    kind: input.kind ?? 'discussion',
+    ...(input.kind === 'feature' ? { status: 'open' as FeatureStatus } : {}),
   };
   await ref.set(topic);
   return topic;

@@ -16,15 +16,17 @@
  * Interest notifications ("a new post matched your tags") apply to topics
  * only — replies never fan out to tag followers.
  */
-import { emailConfigured, sendEmails, type OutgoingEmail } from "@/lib/email";
+import { appUrl, emailConfigured, sendEmails, type OutgoingEmail } from "@/lib/email";
+import { adminUids } from "@/lib/admin";
 import {
+  escapeHtml,
   mentionEmail,
   newPostEmail,
   previewText,
   replyEmail,
   type EmailContent,
 } from "@/lib/emailTemplates";
-import { getReply, getTopic, listMembers } from "@/lib/firestore";
+import { getMember, getReply, getTopic, listMembers } from "@/lib/firestore";
 import { unsubscribeUrl } from "@/lib/unsubscribe";
 import type { MemberProfile, Reply, Topic } from "@/lib/types";
 
@@ -213,5 +215,36 @@ export async function notifyReplyCreated(topicId: string, reply: Reply): Promise
     await sendEmails(messages);
   } catch (err) {
     console.error(`[notifications] reply ${reply?.id} on topic ${topicId} fan-out failed:`, err);
+  }
+}
+
+/**
+ * Tell the community admins about a new feature request, so every request gets
+ * a human look (and a status) quickly. Never throws.
+ */
+export async function notifyAdminsOfFeatureRequest(topic: Topic): Promise<void> {
+  try {
+    if (!emailConfigured) return;
+    const admins = (
+      await Promise.all(adminUids().map((uid) => getMember(uid).catch(() => null)))
+    ).filter((m): m is MemberProfile => Boolean(m && m.email && m.uid !== topic.authorUid));
+    if (admins.length === 0) return;
+
+    const link = `${appUrl()}/requests/${encodeURIComponent(topic.id)}`;
+    const preview = previewText(topic.body ?? "");
+    const messages: OutgoingEmail[] = admins.map((admin) => ({
+      to: admin.email,
+      subject: `New feature request: ${topic.title}`,
+      text: `${topic.authorName} requested a feature for the iVi community:\n\n${topic.title}\n${
+        preview ? `\n${preview}\n` : ""
+      }\nOpen it, reply, and set its status: ${link}\n`,
+      html: `<p>${escapeHtml(topic.authorName)} requested a feature for the iVi community:</p>
+<p><strong>${escapeHtml(topic.title)}</strong></p>${
+        preview ? `<p>${escapeHtml(preview)}</p>` : ""
+      }<p><a href="${escapeHtml(link)}">Open it, reply, and set its status</a></p>`,
+    }));
+    await sendEmails(messages);
+  } catch (err) {
+    console.error(`[notifications] feature request ${topic?.id} admin email failed:`, err);
   }
 }

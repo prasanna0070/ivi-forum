@@ -17,6 +17,9 @@ in the forum.
   editable profile form. Fill the gaps if you like; only your name is required.
 - **Member directory** — searchable card grid (name / startup / skills / company), cohort filter
   chips, rich member profile pages.
+- **Feature requests** — a main tab where members request features for the community, vote for the
+  ones they want (most-wanted first) and follow each request's status (Open, Planned, In progress,
+  Shipped, Not planned). Admins (`ADMIN_UIDS`) set the status and are emailed about every new request.
 - **Forum** — anyone can start a topic; threads follow. Upvote/downvote topics and replies
   (one vote per member, toggle to remove, transactional counts). Sort by New / Top / Active.
 - **Google sign-in, ISB-verified** — joining is four steps: (1) sign in with Google;

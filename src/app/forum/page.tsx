@@ -46,6 +46,12 @@ export default async function ForumPage({
         </h1>
         <TopicComposer />
       </div>
+      <p className="mt-3 text-sm text-muted">
+        Got an idea to make this community better?{' '}
+        <Link href="/requests" className="font-semibold text-brand underline underline-offset-2 hover:text-brand-light">
+          Request a feature
+        </Link>
+      </p>
 
       <nav aria-label="Sort topics" className="mt-6 flex gap-6 border-b border-border md:gap-8">
         {TABS.map((tab) => {
